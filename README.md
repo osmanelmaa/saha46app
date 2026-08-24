@@ -105,6 +105,26 @@ Site **statik**tir; derleme komutu yoktur. Proje ayarlarında şunlar olmalıdı
 `vercel.json` davet yollarını yönlendirir ve `/admin` için `X-Robots-Tag`
 başlığı ekler. Cloudflare'de aynı işi `_redirects` ve `_headers` yapar.
 
+## Canlı ortam
+
+| Ne | Nerede |
+| --- | --- |
+| Alan adı | `saha46.app` — `www` 308 ile çıplak adrese yönlenir |
+| DNS | Cloudflare (proxy açık) |
+| Barındırma | Vercel, `main` dalından otomatik dağıtım |
+| İletişim formu | Vercel Serverless Function → Resend (bölge: `ap-northeast-1`) |
+| `destek@saha46.app` | Cloudflare Email Routing ile kişisel Gmail'e yönlendirilir |
+
+DNS'te dikkat edilecek iki nokta:
+
+- Kök alan adında **tek bir SPF kaydı** olabilir. Cloudflare Email Routing
+  `v=spf1 include:_spf.mx.cloudflare.net ~all` kaydını ister; Resend
+  kurulumunda önerilen `v=spf1 -all` kaydı bununla çakışır ve MX kayıtlarının
+  eklenmesini sessizce engeller. Resend'in gönderim SPF'i zaten ayrı bir
+  alt alanda (`send.saha46.app`) durur.
+- Cloudflare proxy açıkken SSL/TLS modu **Full (strict)** olmalıdır; Flexible
+  modda site yönlendirme döngüsüne girer.
+
 ## Tasarım sistemi
 
 Tüm renk, yarıçap, gölge ve tipografi değerleri `assets/style.css`
