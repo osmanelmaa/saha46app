@@ -18,9 +18,11 @@ derleme adımı yok, JavaScript yalnızca davet sayfasında.
 
 1. **Adres** — `gizlilik/index.html` ve `kosullar/index.html` içinde
    `[ADRES]` yazan yerler (KVKK veri sorumlusu adresi).
-2. **Sunucu bölgesi** — `gizlilik/index.html` içinde `[BÖLGE]`
-   (Supabase projesinin bölgesi). Bölge Türkiye dışındaysa aynı sayfadaki
-   yurt dışına aktarım uyarısı geçerlidir.
+2. **Sunucu bölgesi** — `gizlilik/index.html` → "Verilerin nerede
+   saklandığı" başlığı. Şu an "bölge kesinleşmedi" yazıyor. Supabase
+   projesi kurulunca gerçek bölge adı yazılmalı (App Store'a çıkmadan
+   önce zorunlu). Bölge Türkiye dışındaysa aynı sayfadaki yurt dışına
+   aktarım uyarısı geçerlidir.
 3. **Mağaza bağlantıları** — `index.html` içindeki iki `store-btn`
    bağlantısı (şimdilik `#` ve "Yakında" rozetli) ve `davet/index.html`
    başındaki `APP_STORE` / `GOOGLE_PLAY` değişkenleri.
