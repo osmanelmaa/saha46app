@@ -1,0 +1,19 @@
+# Bağımlılıklar ve derleme ara dosyaları
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Dağıtım araçları
+.vercel/
+.wrangler/
+
+# Ortam değişkenleri — anahtarlar asla depoya girmez
+.env
+.env.*
+!.env.example
+
+# İşletim sistemi
+Thumbs.db
+.DS_Store

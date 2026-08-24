@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /davet/
+Disallow: /admin/
+
+Sitemap: https://saha46.app/sitemap.xml

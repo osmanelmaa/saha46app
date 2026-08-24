@@ -1,0 +1,326 @@
+/* ==========================================================================
+   Saha46 — tasarım tokenları (mobil uygulamayla birebir)
+   ========================================================================== */
+:root{
+  --bg:#F3F7F9;
+  --surface:#FFFFFF;
+  --surface-alt:#ECF3F5;
+  --line:#E0E8EB;
+  --line-strong:#C9DAE0;
+  --brand:#0097B2;
+  --primary-ink:#00738A;
+  --primary-deep:#005061;
+  --primary-soft:#E1F2F6;
+  --navy:#0A2A33;
+  --accent:#00BF63;
+  --accent-ink:#0B7A43;
+  --accent-soft:#E1F7EB;
+  --warn:#B45309;
+  --warn-soft:#FDF2E3;
+  --danger:#CE2532;
+  --danger-soft:#FDECEE;
+  --text:#0A2A33;
+  --text-muted:#546873;
+  --text-faint:#879AA3;
+
+  --grad-dark:linear-gradient(135deg,#0A7E96,#06333D);
+  --grad-btn:linear-gradient(135deg,#00AECB,#0097B2);
+
+  --r-10:10px; --r-14:14px; --r-18:18px; --r-26:26px; --r-pill:999px;
+  --shadow:0 4px 14px rgba(10,42,51,.06);
+
+  --font:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --wrap:1080px;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  font-family:var(--font);
+  font-size:16px;
+  font-weight:500;
+  line-height:1.6;
+  color:var(--text);
+  background:var(--bg);
+  overflow-x:hidden;
+}
+img,svg{max-width:100%;height:auto;display:block}
+a{color:var(--primary-ink);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:3px solid var(--primary-ink);outline-offset:2px;border-radius:6px}
+
+/* --- Tipografi ölçeği --------------------------------------------------- */
+h1,h2,h3,h4{margin:0;color:var(--text);text-wrap:balance}
+h1{font-size:clamp(28px,7vw,44px);font-weight:800;letter-spacing:-.8px;line-height:1.12}
+h2{font-size:clamp(22px,4.4vw,30px);font-weight:700;letter-spacing:-.5px;line-height:1.2}
+h3{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.3}
+h4{font-size:16px;font-weight:700;letter-spacing:-.3px}
+p{margin:0 0 12px}
+p:last-child{margin-bottom:0}
+strong{font-weight:700}
+.muted{color:var(--text-muted)}
+.faint{color:var(--text-faint)}
+.lead{font-size:clamp(16px,2.2vw,18px);color:var(--text-muted)}
+.micro{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.label{font-size:12.5px;font-weight:600}
+
+/* --- Yerleşim ----------------------------------------------------------- */
+.wrap{width:100%;max-width:var(--wrap);margin:0 auto;padding:0 20px}
+.section{padding:40px 0}
+@media(min-width:768px){.section{padding:64px 0}}
+.section-head{max-width:640px;margin-bottom:24px}
+.section-head p{margin-top:8px}
+.skip{position:absolute;left:-9999px}
+.skip:focus{left:16px;top:16px;z-index:99;background:var(--surface);padding:12px 16px;border-radius:var(--r-10);box-shadow:var(--shadow)}
+
+.grid{display:grid;gap:16px}
+@media(min-width:640px){.grid-2{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:640px){.grid-3{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:960px){.grid-3{grid-template-columns:repeat(3,1fr)}}
+
+/* --- Kart --------------------------------------------------------------- */
+.class-logo{
+  border-radius:70%;
+}
+.card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--r-18);
+  box-shadow:var(--shadow);
+  padding:20px;
+}
+.card h3{margin-bottom:6px}
+.card p{color:var(--text-muted);font-size:15px}
+
+.icon{
+  width:40px;height:40px;border-radius:var(--r-14);
+  background:var(--primary-soft);color:var(--primary-ink);
+  display:flex;align-items:center;justify-content:center;margin-bottom:12px;
+}
+.icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.icon.green{background:var(--accent-soft);color:var(--accent-ink)}
+
+/* --- Rozet / hap -------------------------------------------------------- */
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;border-radius:var(--r-pill);
+  background:var(--primary-soft);color:var(--primary-ink);
+  font-size:12.5px;font-weight:600;
+}
+.pill.green{background:var(--accent-soft);color:var(--accent-ink)}
+
+/* --- Butonlar ----------------------------------------------------------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  padding:14px 20px;border-radius:var(--r-14);
+  font-family:var(--font);font-size:15px;font-weight:700;letter-spacing:-.2px;
+  border:1px solid transparent;cursor:pointer;text-decoration:none;
+}
+.btn:hover{text-decoration:none}
+.btn-primary{background:var(--grad-btn);color:#fff}
+.btn-primary:hover{filter:brightness(1.05)}
+.btn-ghost{background:var(--surface);color:var(--primary-ink);border-color:var(--line-strong)}
+.btn-ghost:hover{background:var(--surface-alt)}
+.btn-block{width:100%}
+.btn svg{width:20px;height:20px;flex:none}
+
+/* --- Üst çubuk ---------------------------------------------------------- */
+.topbar{
+  position:sticky;top:0;z-index:20;
+  background:rgba(243,247,249,.92);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.topbar .inner{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px;max-width:var(--wrap);margin:0 auto}
+.brandmark{display:flex;align-items:center;gap:10px;color:var(--text);font-weight:800;letter-spacing:-.5px;font-size:20px}
+.brandmark:hover{text-decoration:none}
+.brandmark img{width:32px;height:32px;flex:none;border-radius:50%}
+.topnav{display:none;gap:20px;align-items:center}
+.topnav a{color:var(--text-muted);font-size:14.5px;font-weight:600}
+.topnav a:hover{color:var(--primary-ink)}
+@media(min-width:768px){.topnav{display:flex}}
+
+/* --- Hero --------------------------------------------------------------- */
+.hero{
+  background:var(--grad-dark);
+  color:#fff;
+
+  padding:44px 0 48px;
+}
+.hero h1{color:#fff}
+.hero .slogan{display:block;font-size:clamp(30px,8vw,52px)}
+.hero .lead{color:rgba(255,255,255,.86);max-width:46ch;margin-top:14px}
+.hero-grid{display:grid;gap:32px;align-items:center}
+.hero-text{min-width:0}
+.hero-logo{
+  width:120px;height:120px;border-radius:50%;
+  margin-bottom:20px;order:-1;justify-self:start;
+}
+@media(min-width:900px){
+  .hero-grid{grid-template-columns:minmax(0,1fr) auto;gap:48px}
+  .hero-logo{width:240px;height:240px;margin-bottom:0;order:0;justify-self:end}
+}
+.store-row{display:flex;flex-wrap:wrap;gap:14px;margin-top:26px}
+.store-btn{
+  display:inline-flex;align-items:center;gap:12px;
+  background:#fff;color:var(--navy);
+  border-radius:var(--r-14);padding:12px 18px;
+  font-weight:700;font-size:16px;letter-spacing:-.2px;position:relative;
+}
+a.store-btn:hover{text-decoration:none;background:var(--surface-alt)}
+span.store-btn{cursor:default}
+.store-btn svg{width:24px;height:24px;flex:none;fill:var(--navy)}
+.store-btn .stack{line-height:1.2;text-align:left}
+.store-btn .stack small{display:block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text-muted)}
+.store-btn .soon{
+  position:absolute;top:-10px;right:-8px;
+  background:var(--accent);color:#fff;
+  font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  padding:3px 9px;border-radius:var(--r-pill);
+}
+.hero-note{margin-top:22px;font-size:15px;color:rgba(255,255,255,.82)}
+
+/* --- Adımlar ------------------------------------------------------------ */
+.step .num{
+  width:36px;height:36px;border-radius:var(--r-pill);
+  background:var(--brand);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:15px;margin-bottom:12px;
+}
+
+/* --- Ekran görüntüleri -------------------------------------------------- */
+.shots{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.phone{
+  background:var(--surface);
+  border:1px solid var(--line-strong);
+  border-radius:var(--r-26);
+  padding:10px;box-shadow:var(--shadow);margin:0;
+}
+.phone .screen{
+  border-radius:18px;
+  background:var(--surface-alt);
+  border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;
+  text-align:center;overflow:hidden;
+  color:var(--text-muted);font-size:12.5px;font-weight:600;
+}
+.phone .screen img{width:100%;height:100%;object-fit:cover;border-radius:18px}
+.phone figcaption{margin-top:10px;text-align:center;font-size:12.5px;font-weight:600;color:var(--text-muted)}
+
+/* --- SSS ---------------------------------------------------------------- */
+.faq{display:grid;gap:10px}
+details.qa{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-14);box-shadow:var(--shadow);
+}
+details.qa summary{
+  list-style:none;cursor:pointer;padding:16px 18px;
+  font-weight:700;font-size:16px;letter-spacing:-.3px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+}
+details.qa summary::-webkit-details-marker{display:none}
+details.qa summary::after{
+  content:"";flex:none;width:11px;height:11px;margin-top:6px;
+  border-right:2px solid var(--primary-ink);border-bottom:2px solid var(--primary-ink);
+  transform:rotate(45deg);transition:transform .15s ease;
+}
+details.qa[open] summary::after{transform:rotate(-135deg)}
+details.qa .answer{padding:0 18px 18px;color:var(--text-muted);font-size:15px}
+details.qa .answer p{margin-bottom:10px}
+
+/* --- Yasal metin sayfaları ---------------------------------------------- */
+.page-head{padding:32px 0 8px}
+.page-head .pill{margin-bottom:14px}
+.page-head .lead{margin-top:12px}
+.doc{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-18);box-shadow:var(--shadow);
+  padding:24px 20px;margin-bottom:40px;
+}
+@media(min-width:768px){.doc{padding:32px}}
+.doc h2{margin:28px 0 10px;font-size:20px}
+.doc > h2:first-child{margin-top:0}
+.doc h3{margin:20px 0 8px}
+.doc p,.doc li{color:var(--text-muted);font-size:15.5px}
+.doc ul,.doc ol{margin:0 0 12px;padding-left:20px}
+.doc li{margin-bottom:6px}
+.doc hr{border:0;border-top:1px solid var(--line);margin:24px 0}
+.toc{background:var(--surface-alt);border-radius:var(--r-14);padding:16px 18px;margin-bottom:24px}
+.toc ol{margin:8px 0 0;padding-left:20px}
+.toc li{margin-bottom:4px;font-size:14.5px}
+.note{
+  background:var(--primary-soft);border-radius:var(--r-14);
+  padding:14px 16px;margin:16px 0;font-size:15px;color:var(--primary-deep);
+}
+.note p{color:inherit;font-size:inherit}
+.note.green{background:var(--accent-soft);color:var(--accent-ink)}
+.note.warn{background:var(--warn-soft);color:var(--warn)}
+.note.danger{background:var(--danger-soft);color:var(--danger)}
+.fill{background:var(--warn-soft);color:var(--warn);padding:1px 7px;border-radius:var(--r-pill);font-weight:700;font-size:13.5px;white-space:nowrap}
+.doc table{width:100%;border-collapse:collapse;font-size:14.5px;margin-bottom:12px;min-width:420px}
+.doc th,.doc td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.doc th{font-weight:700;color:var(--text);font-size:12.5px;text-transform:uppercase;letter-spacing:.4px}
+.doc td{color:var(--text-muted)}
+.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* --- Davet sayfası ------------------------------------------------------ */
+.invite{max-width:520px;margin:0 auto;text-align:center;padding:32px 0 48px}
+.code-box{
+  background:var(--surface);border:1px solid var(--line-strong);
+  border-radius:var(--r-18);box-shadow:var(--shadow);
+  padding:24px 16px;margin:20px 0;
+}
+.code-box .code{
+  font-size:clamp(28px,9vw,44px);font-weight:800;letter-spacing:2px;
+  color:var(--primary-ink);word-break:break-all;line-height:1.15;
+}
+.invite .btn{margin-bottom:10px}
+.copy-state{font-size:12.5px;font-weight:600;color:var(--accent-ink);min-height:20px;margin-top:4px}
+
+/* --- Alt bilgi ---------------------------------------------------------- */
+.footer{border-top:1px solid var(--line);background:var(--surface);padding:32px 0 40px}
+.footer .cols{display:grid;gap:24px;margin-bottom:24px}
+@media(min-width:640px){.footer .cols{grid-template-columns:1.4fr 1fr 1fr}}
+.footer h4{margin-bottom:10px;font-size:12.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-muted)}
+.footer ul{list-style:none;margin:0;padding:0}
+.footer li{margin-bottom:8px;font-size:14.5px}
+.footer .brandmark{margin-bottom:10px}
+.footer p{font-size:14.5px;color:var(--text-muted);max-width:38ch}
+.copyright{border-top:1px solid var(--line);padding-top:16px;font-size:13px;color:var(--text-muted)}
+
+/* --- Yardımcı boşluk sınıfları ------------------------------------------ */
+.mt-12{margin-top:12px}
+.mt-14{margin-top:14px}
+.mt-20{margin-top:20px}
+.mb-6{margin-bottom:6px}
+.mb-24{margin-bottom:24px}
+.section-head .pill + h2{margin-top:12px}
+
+/* --- İletişim formu ------------------------------------------------------ */
+.btn-satir{display:flex;flex-wrap:wrap;gap:12px}
+.form{display:grid;gap:16px;margin-top:16px}
+.alan{display:grid;gap:6px}
+.alan label{font-size:12.5px;font-weight:600;color:var(--text)}
+.form input,.form select,.form textarea{
+  width:100%;
+  font-family:var(--font);font-size:16px;font-weight:500;color:var(--text);
+  background:var(--surface);
+  border:1px solid var(--line-strong);border-radius:var(--r-14);
+  padding:12px 14px;
+}
+.form textarea{resize:vertical;min-height:130px;line-height:1.5}
+.form select{appearance:none;padding-right:38px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--primary-ink) 50%),linear-gradient(135deg,var(--primary-ink) 50%,transparent 50%);
+  background-position:calc(100% - 20px) 21px,calc(100% - 15px) 21px;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.form input:focus,.form select:focus,.form textarea:focus{
+  outline:none;border-color:var(--primary-ink);box-shadow:0 0 0 3px var(--primary-soft);
+}
+.form .ipucu{font-size:12.5px;font-weight:500;color:var(--text-muted);margin:0}
+.form button{justify-self:start}
+.form button[disabled]{opacity:.6;cursor:default}
+.balkupu{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.form-durum{font-size:14.5px;font-weight:600;margin:0;min-height:22px}
+.form-durum.iyi{color:var(--accent-ink)}
+.form-durum.hata{color:var(--danger)}
