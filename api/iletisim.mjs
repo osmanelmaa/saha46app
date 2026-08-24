@@ -26,7 +26,9 @@ export default async function handler(req, res) {
       }
     }
 
-    const ulke = req.headers['x-vercel-ip-country'] || '-';
+    // Alan adı Cloudflare proxy'si arkasındaysa Vercel'in kendi başlığı
+    // boş kalabilir; o durumda Cloudflare'in başlığına düşülür.
+    const ulke = req.headers['x-vercel-ip-country'] || req.headers['cf-ipcountry'] || '-';
     const { durum, govde: yanit } = await iletisimiIsle(govde ?? {}, process.env, ulke);
     res.status(durum).json(yanit);
   } catch (e) {
