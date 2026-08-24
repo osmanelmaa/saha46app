@@ -55,13 +55,18 @@ Sonra http://localhost:8000 adresini aç. Davet sayfasını denemek için
 
 ## İletişim formu
 
-Destek sayfasındaki form `POST /api/iletisim` adresine gider. Bu uç nokta
-bir **Cloudflare Pages Function**: [`functions/api/iletisim.js`](functions/api/iletisim.js).
-Mesajı doğrular, bal küpü alanıyla botları eler ve Resend üzerinden
-e-posta olarak gönderir. Hiçbir yerde veritabanına yazılmaz.
+Destek sayfasındaki form `POST /api/iletisim` adresine gider. Ortak mantık
+[`lib/iletisim.mjs`](lib/iletisim.mjs) içindedir: doğrulama, bal küpü ile bot
+elemesi ve Resend üzerinden e-posta gönderimi. İki platform sarmalayıcısı
+vardır ve hangisine dağıtırsanız o çalışır:
 
-Çalışması için Cloudflare Pages → Settings → Environment variables
-altında üç değişken gerekir:
+| Platform | Dosya |
+| --- | --- |
+| Vercel | [`api/iletisim.mjs`](api/iletisim.mjs) |
+| Cloudflare Pages | [`functions/api/iletisim.js`](functions/api/iletisim.js) |
+
+Çalışması için üç ortam değişkeni gerekir (Vercel: Settings → Environment
+Variables, Cloudflare: Settings → Environment variables):
 
 | Değişken | Örnek | Açıklama |
 | --- | --- | --- |
@@ -69,24 +74,30 @@ altında üç değişken gerekir:
 | `MAIL_TO` | `destek@saha46.app` | mesajların düşeceği adres |
 | `MAIL_FROM` | `Saha46 <form@saha46.app>` | Resend'de doğrulanmış alan adından |
 
-Resend'de `saha46.app` alan adını doğrulaman (DNS'e SPF/DKIM kayıtları)
+Resend'de `saha46.app` alan adını doğrulamanız (DNS'e SPF/DKIM kayıtları)
 gerekir, yoksa gönderim reddedilir. Değişkenler tanımlı değilken form
 "Form şu an kapalı, lütfen e-posta ile yaz" der; sayfa çalışmaya devam eder.
 
-Yerelde denemek için: `npx wrangler pages dev .`
-(Düz `python -m http.server` ile form gönderimi çalışmaz, sayfanın geri
-kalanı çalışır.)
+Mesaj hiçbir yerde saklanmaz, IP yazılmaz (yalnızca ülke kodu).
 
 ## Dağıtım
 
-- **Cloudflare Pages** (form bunu gerektirir): build komutu yok, output
-  dizini `/`. `_redirects` davet yollarını, `functions/` klasörü de
-  iletişim formunu kendiliğinden ayağa kaldırır.
-- **Vercel:** Framework "Other", build komutu yok, output dizini kök.
-  `vercel.json` davet yollarını `davet/index.html` dosyasına yönlendirir.
-  Dikkat: Vercel `functions/` klasörünü çalıştırmaz — iletişim formunu
-  Vercel'de kullanmak istersen aynı kodu `api/iletisim.js` altına
-  taşımak gerekir.
+Site **statik**tir; derleme komutu yoktur. Proje ayarlarında şunlar olmalıdır:
+
+- **Framework preset:** Other / None
+- **Root Directory:** deponun kökü (`./`) — `admin-src` DEĞİL
+- **Build command:** boş
+- **Output directory:** `./`
+
+> **Dikkat:** Depoda `admin-src/` içinde bir Next.js projesi var. Vercel ve
+> Cloudflare, depoyu içe aktarırken bunu görüp Root Directory olarak
+> `admin-src` önerebilir. Kabul ederseniz sitenin kökü yayınlanmaz ve ana
+> sayfa **404 NOT_FOUND** verir (panelin `basePath` değeri `/admin`
+> olduğu için kök adres o projede de yoktur). Root Directory mutlaka kök
+> olmalıdır; panel zaten derlenmiş hâliyle `admin/` klasöründe durur.
+
+`vercel.json` davet yollarını yönlendirir ve `/admin` için `X-Robots-Tag`
+başlığı ekler. Cloudflare'de aynı işi `_redirects` ve `_headers` yapar.
 
 ## Tasarım sistemi
 
