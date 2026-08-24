@@ -16,8 +16,12 @@ derleme adımı yok, JavaScript yalnızca davet sayfasında.
 
 ## Yayına almadan önce doldurulacaklar
 
-1. **Adres** — `gizlilik/index.html` ve `kosullar/index.html` içinde
-   `[ADRES]` yazan yerler (KVKK veri sorumlusu adresi).
+1. ~~Adres~~ — tamamlandı. Açık adres yerine "Kahramanmaraş, Türkiye"
+   yazılıp başvuru kanalı olarak e-posta gösterildi. Veri Sorumlusuna
+   Başvuru Usul ve Esasları Hakkında Tebliğ, kayıtlı e-posta adresinden
+   yapılan başvuruyu geçerli sayar. Posta yoluyla başvurmak isteyene
+   tebligat adresi talep üzerine iletilir — böyle bir talep gelirse
+   yanıtsız bırakmayın.
 2. **Sunucu bölgesi** — `gizlilik/index.html` → "Verilerin nerede
    saklandığı" başlığı. Şu an "bölge kesinleşmedi" yazıyor. Supabase
    projesi kurulunca gerçek bölge adı yazılmalı (App Store'a çıkmadan
