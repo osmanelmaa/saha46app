@@ -1,0 +1,183 @@
+<!doctype html>
+<!--
+  Saha46 — kimlik doğrulama köprüsü
+  Yayınlanacak adres: https://saha46.app/giris-tamam
+
+  NEDEN GEREKLİ
+  Mobil tarayıcılar bir web adresinden "saha46://" gibi özel bir şemaya
+  OTOMATİK yönlenmeyi engeller. Supabase doğrulama bağlantısı doğrudan
+  uygulamaya yönlendirdiğinde tarayıcı boş sayfada kalır.
+
+  Bu sayfa araya girer: adresteki kodu alır, uygulamayı açmayı dener ve
+  açılmazsa kullanıcıya düğme sunar. Uygulama kurulu değilse mağazaya yollar.
+
+  KURULUM
+  1. Bu dosyayı web projesine ekle, /giris-tamam adresinde yayınla.
+  2. Supabase → Authentication → URL Configuration → Site URL:
+     https://saha46.app/giris-tamam
+  3. Redirect URLs listesinde şunlar bulunsun:
+     https://saha46.app/**
+     saha46://**
+     exp://**            (yalnızca Expo Go ile geliştirme için)
+-->
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Saha46 · Giriş tamamlanıyor</title>
+  <style>
+    :root {
+      --brand: #0097B2;
+      --ink: #00738A;
+      --bg: #F3F7F9;
+      --surface: #FFFFFF;
+      --line: #E0E8EB;
+      --text: #0A2A33;
+      --muted: #546873;
+      --faint: #879AA3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(10, 42, 51, 0.06);
+    }
+    .head {
+      background: var(--brand);
+      color: #fff;
+      text-align: center;
+      padding: 26px 24px;
+    }
+    .head .name { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+    .head .slogan { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+    .body { padding: 28px 24px; }
+    h1 { margin: 0 0 10px; font-size: 20px; letter-spacing: -0.4px; }
+    p { margin: 0 0 18px; font-size: 15px; line-height: 23px; color: var(--muted); }
+    .btn {
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      padding: 15px 20px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      background: var(--brand);
+      color: #fff;
+    }
+    .btn.secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid #C9DAE0;
+      margin-top: 10px;
+    }
+    .stores { display: none; margin-top: 10px; }
+    .note { font-size: 12px; line-height: 18px; color: var(--faint); margin: 18px 0 0; }
+    .error { display: none; font-size: 14px; color: #CE2532; margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="head">
+      <div class="name">SAHA46</div>
+      <div class="slogan">Rakipsiz kalma</div>
+    </div>
+
+    <div class="body">
+      <h1 id="title">Girişin doğrulandı</h1>
+      <p id="text">Uygulamaya dönmek için aşağıdaki düğmeye dokun.</p>
+      <p class="error" id="error"></p>
+
+      <a class="btn" id="open" href="#">Uygulamayı aç</a>
+
+      <div class="stores" id="stores">
+        <a class="btn secondary" id="ios" href="#">App Store’dan indir</a>
+        <a class="btn secondary" id="android" href="#">Google Play’den indir</a>
+      </div>
+
+      <p class="note">
+        Uygulama açılmazsa kurulu olmayabilir. Yukarıdaki mağaza bağlantılarından indirip
+        e-posta ve şifrenle giriş yapabilirsin.
+      </p>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+      // Supabase bazı akışlarda değerleri adres parçasında (#) gönderir.
+      var hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+
+      function pick(key) {
+        return params.get(key) || hash.get(key) || '';
+      }
+
+      var errorText = pick('error_description') || pick('error');
+      if (errorText) {
+        document.getElementById('title').textContent = 'Bağlantı geçersiz';
+        document.getElementById('text').textContent =
+          'Bu bağlantı kullanılmış ya da süresi dolmuş olabilir. Uygulamadan yeni bir bağlantı iste.';
+        var box = document.getElementById('error');
+        box.textContent = decodeURIComponent(errorText.replace(/\+/g, ' '));
+        box.style.display = 'block';
+        document.getElementById('open').style.display = 'none';
+        return;
+      }
+
+      // Uygulamaya taşınacak değerler: PKCE kodu ya da eski akıştaki jetonlar.
+      var forward = new URLSearchParams();
+      ['code', 'access_token', 'refresh_token', 'type', 'token_hash'].forEach(function (key) {
+        var value = pick(key);
+        if (value) forward.set(key, value);
+      });
+
+      // Hedef normalde uygulamanın kendi şeması. Ama Expo Go ile geliştirme
+      // yapılırken adres `exp://IP:PORT/--/...` oluyor ve Supabase bu şemayı
+      // geçerli saymayıp yönlendirmeyi reddediyor. O yüzden uygulama, kendi
+      // adresini `app` parametresiyle buraya taşıyor ve biz ona iletiyoruz.
+      var appUrl = pick('app');
+      var base = 'saha46://giris-tamam';
+      if (appUrl) {
+        var decoded = decodeURIComponent(appUrl);
+        // Yalnızca bilinen şemalara izin ver: açık yönlendirme açığı olmasın.
+        if (/^(saha46|exp):\/\//.test(decoded)) base = decoded;
+      }
+
+      var target = base + (base.indexOf('?') === -1 ? '?' : '&') + forward.toString();
+      var link = document.getElementById('open');
+      link.href = target;
+
+      // Otomatik denemeyi bir kez yap; tarayıcı engellerse düğme zaten duruyor.
+      var opened = false;
+      link.addEventListener('click', function () { opened = true; });
+      setTimeout(function () { location.href = target; }, 300);
+
+      // Uygulama açılmadıysa mağaza seçeneklerini göster.
+      setTimeout(function () {
+        if (opened || document.hidden) return;
+        document.getElementById('stores').style.display = 'block';
+      }, 2500);
+
+      // TODO: Mağaza bağlantıları yayına çıkınca doldurulacak.
+      document.getElementById('ios').href = 'https://apps.apple.com/tr/app/saha46/id000000000';
+      document.getElementById('android').href =
+        'https://play.google.com/store/apps/details?id=com.saha46.app';
+    })();
+  </script>
+</body>
+</html>
