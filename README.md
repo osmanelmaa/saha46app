@@ -13,6 +13,7 @@ derleme adımı yok, JavaScript yalnızca davet sayfasında.
 | `/destek/` | `destek/index.html` | App Store "Support URL" |
 | `/hesap-silme/` | `hesap-silme/index.html` | Apple'ın istediği hesap silme anlatımı |
 | `/davet/[kod]` | `davet/index.html` | Uygulamadan paylaşılan takım davet bağlantıları |
+| `/giris-tamam` | `giris-tamam.html` | Supabase doğrulama bağlantısı için kimlik doğrulama köprüsü |
 
 ## Yayına almadan önce doldurulacaklar
 
@@ -124,6 +125,30 @@ DNS'te dikkat edilecek iki nokta:
   alt alanda (`send.saha46.app`) durur.
 - Cloudflare proxy açıkken SSL/TLS modu **Full (strict)** olmalıdır; Flexible
   modda site yönlendirme döngüsüne girer.
+
+## Kimlik doğrulama köprüsü (/giris-tamam)
+
+Mobil tarayıcılar bir web adresinden `saha46://` gibi özel bir şemaya
+otomatik yönlenmeyi engeller. Supabase doğrulama bağlantısı doğrudan
+uygulamaya yönlendirdiğinde kullanıcı boş sayfada kalır.
+[`giris-tamam.html`](giris-tamam.html) araya girer: adresteki kodu alır,
+uygulamayı açmayı dener, açılmazsa düğme gösterir, uygulama kurulu
+değilse mağazaya yollar.
+
+Supabase tarafında yapılması gerekenler:
+
+- **Authentication → URL Configuration → Site URL:** `https://saha46.app/giris-tamam`
+- **Redirect URLs:** `https://saha46.app/**`, `saha46://**`, `exp://**`
+  (sonuncusu yalnızca Expo Go ile geliştirme için)
+
+Sayfa `code`, `access_token`, `refresh_token`, `type` ve `token_hash`
+değerlerini hem sorgu dizesinden hem adres parçasından (`#`) okuyup
+uygulamaya taşır. `app` parametresi Expo Go'nun değişken adresi için
+vardır ve açık yönlendirme olmaması adına yalnızca `saha46://` ve
+`exp://` şemalarını kabul eder.
+
+Mağaza bağlantıları hâlâ yer tutucudur; dosyanın sonundaki `TODO`
+satırında işaretli.
 
 ## Tasarım sistemi
 
