@@ -1,38 +1,4 @@
 <!doctype html>
-<!--
-  Saha46 — kimlik doğrulama köprüsü
-  Yayınlanacak adres: https://saha46.app/giris-tamam
-
-  NEDEN GEREKLİ
-  İki ayrı engel var:
-
-  1. Mobil tarayıcılar bir web adresinden "saha46://" gibi özel bir şemaya
-     OTOMATİK yönlenmeyi engeller. Doğrulama bağlantısı doğrudan uygulamaya
-     yönlendirdiğinde tarayıcı boş sayfada kalır.
-
-  2. Supabase (GoTrue) "exp://" şemasını geçerli saymaz. İzin listesine birebir
-     yazılsa bile yönlendirmeyi reddedip Site URL'e düşer. Expo Go ile
-     geliştirirken uygulamanın adresi tam da o biçimde üretildiği için giriş
-     uygulamaya hiç dönemez.
-
-  Bu sayfa ikisini birden çözer: Supabase'in kabul ettiği bir https adresidir,
-  adresteki kodu alır ve uygulamanın gerçek adresine taşır. Uygulama kendi
-  adresini `app` parametresiyle gönderir; parametre yoksa "saha46://" varsayılır.
-
-  KURULUM
-  1. Bu dosyayı /giris-tamam adresinde, olduğu gibi yayınla.
-  2. Supabase → Authentication → URL Configuration:
-     Site URL: https://saha46.app
-     Redirect URLs: https://saha46.app/**  ve  saha46://**
-     ("exp://**" gerekmez; Supabase zaten kabul etmiyor.)
-
-  DEĞİŞTİRİRKEN DİKKAT
-  - Sayfanın adresi değişirse uygulamadaki BRIDGE_URL de değişmeli (lib/auth.ts).
-  - `app` parametresi yalnızca saha46:// ve exp:// şemalarını kabul eder;
-     bu kontrol kaldırılırsa açık yönlendirme (open redirect) açığı oluşur.
-  - Değerler hem sorgu dizesinde (?) hem adres parçasında (#) gelebilir;
-     ikisi de okunmalı.
--->
 <html lang="tr">
 <head>
   <meta charset="utf-8" />
