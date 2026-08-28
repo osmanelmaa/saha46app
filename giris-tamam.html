@@ -4,21 +4,34 @@
   Yayınlanacak adres: https://saha46.app/giris-tamam
 
   NEDEN GEREKLİ
-  Mobil tarayıcılar bir web adresinden "saha46://" gibi özel bir şemaya
-  OTOMATİK yönlenmeyi engeller. Supabase doğrulama bağlantısı doğrudan
-  uygulamaya yönlendirdiğinde tarayıcı boş sayfada kalır.
+  İki ayrı engel var:
 
-  Bu sayfa araya girer: adresteki kodu alır, uygulamayı açmayı dener ve
-  açılmazsa kullanıcıya düğme sunar. Uygulama kurulu değilse mağazaya yollar.
+  1. Mobil tarayıcılar bir web adresinden "saha46://" gibi özel bir şemaya
+     OTOMATİK yönlenmeyi engeller. Doğrulama bağlantısı doğrudan uygulamaya
+     yönlendirdiğinde tarayıcı boş sayfada kalır.
+
+  2. Supabase (GoTrue) "exp://" şemasını geçerli saymaz. İzin listesine birebir
+     yazılsa bile yönlendirmeyi reddedip Site URL'e düşer. Expo Go ile
+     geliştirirken uygulamanın adresi tam da o biçimde üretildiği için giriş
+     uygulamaya hiç dönemez.
+
+  Bu sayfa ikisini birden çözer: Supabase'in kabul ettiği bir https adresidir,
+  adresteki kodu alır ve uygulamanın gerçek adresine taşır. Uygulama kendi
+  adresini `app` parametresiyle gönderir; parametre yoksa "saha46://" varsayılır.
 
   KURULUM
-  1. Bu dosyayı web projesine ekle, /giris-tamam adresinde yayınla.
-  2. Supabase → Authentication → URL Configuration → Site URL:
-     https://saha46.app/giris-tamam
-  3. Redirect URLs listesinde şunlar bulunsun:
-     https://saha46.app/**
-     saha46://**
-     exp://**            (yalnızca Expo Go ile geliştirme için)
+  1. Bu dosyayı /giris-tamam adresinde, olduğu gibi yayınla.
+  2. Supabase → Authentication → URL Configuration:
+     Site URL: https://saha46.app
+     Redirect URLs: https://saha46.app/**  ve  saha46://**
+     ("exp://**" gerekmez; Supabase zaten kabul etmiyor.)
+
+  DEĞİŞTİRİRKEN DİKKAT
+  - Sayfanın adresi değişirse uygulamadaki BRIDGE_URL de değişmeli (lib/auth.ts).
+  - `app` parametresi yalnızca saha46:// ve exp:// şemalarını kabul eder;
+     bu kontrol kaldırılırsa açık yönlendirme (open redirect) açığı oluşur.
+  - Değerler hem sorgu dizesinde (?) hem adres parçasında (#) gelebilir;
+     ikisi de okunmalı.
 -->
 <html lang="tr">
 <head>

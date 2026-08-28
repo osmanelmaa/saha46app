@@ -128,24 +128,38 @@ DNS'te dikkat edilecek iki nokta:
 
 ## Kimlik doğrulama köprüsü (/giris-tamam)
 
-Mobil tarayıcılar bir web adresinden `saha46://` gibi özel bir şemaya
-otomatik yönlenmeyi engeller. Supabase doğrulama bağlantısı doğrudan
-uygulamaya yönlendirdiğinde kullanıcı boş sayfada kalır.
-[`giris-tamam.html`](giris-tamam.html) araya girer: adresteki kodu alır,
-uygulamayı açmayı dener, açılmazsa düğme gösterir, uygulama kurulu
-değilse mağazaya yollar.
+[`giris-tamam.html`](giris-tamam.html) iki ayrı engeli birden çözer:
 
-Supabase tarafında yapılması gerekenler:
+1. Mobil tarayıcılar bir web adresinden `saha46://` gibi özel bir şemaya
+   otomatik yönlenmeyi engeller; doğrulama bağlantısı doğrudan uygulamaya
+   yönlendirdiğinde kullanıcı boş sayfada kalır.
+2. Supabase (GoTrue) `exp://` şemasını geçerli saymaz. İzin listesine
+   birebir yazılsa bile yönlendirmeyi reddedip Site URL'e düşer. Expo Go
+   ile geliştirirken uygulamanın adresi tam da o biçimde üretilir.
 
-- **Authentication → URL Configuration → Site URL:** `https://saha46.app/giris-tamam`
-- **Redirect URLs:** `https://saha46.app/**`, `saha46://**`, `exp://**`
-  (sonuncusu yalnızca Expo Go ile geliştirme için)
+Sayfa, Supabase'in kabul ettiği bir https adresidir: adresteki kodu alır
+ve uygulamanın gerçek adresine taşır. Uygulama kendi adresini `app`
+parametresiyle gönderir; parametre yoksa `saha46://` varsayılır.
 
-Sayfa `code`, `access_token`, `refresh_token`, `type` ve `token_hash`
-değerlerini hem sorgu dizesinden hem adres parçasından (`#`) okuyup
-uygulamaya taşır. `app` parametresi Expo Go'nun değişken adresi için
-vardır ve açık yönlendirme olmaması adına yalnızca `saha46://` ve
-`exp://` şemalarını kabul eder.
+Supabase → Authentication → URL Configuration:
+
+| Ayar | Değer |
+| --- | --- |
+| Site URL | `https://saha46.app` |
+| Redirect URLs | `https://saha46.app/**` ve `saha46://**` |
+
+`exp://**` yazmaya gerek yok — Supabase zaten kabul etmiyor, köprü sayfası
+bu yüzden var.
+
+**Bu dosya mobil uygulama deposunda `web/giris-tamam.html` olarak durur ve
+buraya olduğu gibi kopyalanır.** Değiştirmek gerekirse kaynak orasıdır;
+iki kopya birbirinden ayrılmamalı. Sayfanın adresi değişirse uygulamadaki
+`BRIDGE_URL` de değişmeli (`lib/auth.ts`).
+
+İçindeki `app` parametresi yalnızca `saha46://` ve `exp://` şemalarını
+kabul eder; bu kontrol kaldırılırsa açık yönlendirme (open redirect) açığı
+oluşur. Değerler hem sorgu dizesinde (`?`) hem adres parçasında (`#`)
+gelebildiği için ikisi de okunur.
 
 Mağaza bağlantıları hâlâ yer tutucudur; dosyanın sonundaki `TODO`
 satırında işaretli.
