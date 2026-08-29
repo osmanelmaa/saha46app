@@ -1,152 +1,234 @@
-<!DOCTYPE html>
+<!doctype html>
+<!--
+  Saha46 — takım daveti köprüsü
+  Yayınlanacak adres: https://saha46.app/davet/<kod>   (örn. /davet/MS-4A43)
+
+  NE İŞE YARAR
+  Uygulamadaki "Takım arkadaşını davet et" akışı bu adresi paylaşır.
+  Bağlantıya tıklayan kişi:
+    - uygulama kuruluysa doğrudan katılım ekranına düşer,
+    - kurulu değilse kodu ekranda görür ve mağazaya yönlendirilir.
+
+  Mobil tarayıcılar bir web adresinden "saha46://" şemasına OTOMATİK
+  yönlenmeyi engellediği için araya bu sayfa girer; giris-tamam.html ile
+  aynı mantık.
+
+  KURULUM
+  - Kod adresten okunur. Yol biçimi (/davet/MS-4A43) için sunucu
+    yönlendirmesi gerekir: vercel.json içindeki rewrites ve _redirects
+    bunu yapar, ikisi de /davet/index.html dosyasına düşürür.
+  - Sorgu biçimi (/davet/?kod=MS-4A43) yönlendirme olmadan da çalışır.
+
+  DEĞİŞTİRİRKEN DİKKAT
+  - Kod sunucuda DOĞRULANMAZ; sayfa yalnızca yönlendirme yapar. Geçerlilik
+    denetimi uygulama tarafında.
+  - Koddaki karakterler süzülür (A-Z, 0-9, tire); bu, adres üzerinden
+    betik enjeksiyonunu engeller, kaldırılmamalı.
+-->
 <html lang="tr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Takım daveti — Saha46</title>
-<meta name="description" content="Sana bir Saha46 takım daveti gönderildi. Uygulamayı indir, katılım kodunu gir, takıma katıl.">
-<meta name="robots" content="noindex">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Saha46">
-<meta property="og:locale" content="tr_TR">
-<meta property="og:title" content="Takım daveti — Saha46">
-<meta property="og:description" content="Sana bir Saha46 takım daveti gönderildi. Uygulamayı indir ve takıma katıl.">
-<meta property="og:image" content="https://saha46.app/assets/og.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#0097B2">
-<link rel="icon" href="/assets/logo.png" type="image/png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Saha46 · Takım daveti</title>
+  <style>
+    :root {
+      --brand: #0097B2;
+      --ink: #00738A;
+      --bg: #F3F7F9;
+      --surface: #FFFFFF;
+      --surface-alt: #ECF3F5;
+      --line: #E0E8EB;
+      --text: #0A2A33;
+      --muted: #546873;
+      --faint: #879AA3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(10, 42, 51, 0.06);
+    }
+    .head {
+      background: var(--brand);
+      color: #fff;
+      text-align: center;
+      padding: 26px 24px;
+    }
+    .head .name { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+    .head .slogan { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+    .body { padding: 28px 24px; }
+    h1 { margin: 0 0 10px; font-size: 20px; letter-spacing: -0.4px; }
+    p { margin: 0 0 18px; font-size: 15px; line-height: 23px; color: var(--muted); }
+
+    /* Katılım kodu — sayfanın asıl içeriği, en büyük öğe. */
+    .code-box {
+      background: var(--surface-alt);
+      border-radius: 14px;
+      text-align: center;
+      padding: 20px 16px;
+      margin: 0 0 18px;
+    }
+    .code-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-bottom: 8px;
+    }
+    .code {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      line-height: 1.15;
+      color: var(--ink);
+      word-break: break-all;
+    }
+
+    .btn {
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      padding: 15px 20px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      background: var(--brand);
+      color: #fff;
+      border: 0;
+      width: 100%;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn.secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid #C9DAE0;
+      margin-top: 10px;
+    }
+    .stores { display: none; margin-top: 10px; }
+    .state { font-size: 13px; font-weight: 600; color: #0B7A43; min-height: 20px; margin: 8px 0 0; text-align: center; }
+    .note { font-size: 12px; line-height: 18px; color: var(--faint); margin: 18px 0 0; }
+    .error { display: none; font-size: 14px; color: #CE2532; margin-bottom: 14px; }
+  </style>
 </head>
 <body>
-<a class="skip" href="#icerik">İçeriğe geç</a>
-
-<header class="topbar">
-  <div class="inner">
-    <a class="brandmark" href="/">
-      <img src="/assets/logo.png" width="32" height="32" alt="Saha46 logosu">
-      <span>Saha46</span>
-    </a>
-    <nav class="topnav" aria-label="Site menüsü">
-      <a href="/#ozellikler">Özellikler</a>
-      <a href="/#sss">SSS</a>
-      <a href="/destek/">Destek</a>
-      <a href="/gizlilik/">Gizlilik</a>
-    </nav>
-  </div>
-</header>
-
-<main id="icerik">
-<div class="wrap">
-  <section class="invite">
-    <span class="pill">Takım daveti</span>
-    <h1 class="mt-14">Takıma davet edildin</h1>
-    <p class="lead">Saha46'yı indir, hesabını aç ve aşağıdaki katılım kodunu gir. Takım arkadaşlarının arasına katıl.</p>
-
-    <div class="code-box">
-      <p class="micro muted mb-6">Katılım kodu</p>
-      <p class="code" id="kod">—</p>
+  <main class="card">
+    <div class="head">
+      <div class="name">SAHA46</div>
+      <div class="slogan">Rakipsiz kalma</div>
     </div>
 
-    <a class="btn btn-primary btn-block" id="magaza" href="/">Uygulamayı indir</a>
-    <a class="btn btn-ghost btn-block" id="uygulamada" href="/" hidden>Uygulama zaten kuruluysa aç</a>
-    <button class="btn btn-ghost btn-block" type="button" id="kopyala">Kodu kopyala</button>
-    <p class="copy-state" id="durum" role="status" aria-live="polite"></p>
+    <div class="body">
+      <h1 id="title">Takıma davet edildin</h1>
+      <p id="text">Aşağıdaki düğmeye dokunarak uygulamada takıma katılabilirsin.</p>
+      <p class="error" id="error"></p>
 
-    <p class="label muted mt-20">Kod çalışmıyorsa seni davet eden takım arkadaşından yeni bir bağlantı iste. Uygulamada hesap açmak için e-posta, Google ya da Apple hesabını kullanabilirsin.</p>
-  </section>
-</div>
-</main>
+      <div class="code-box" id="codeBox">
+        <div class="code-label">Katılım kodu</div>
+        <div class="code" id="code">—</div>
+      </div>
 
-<footer class="footer">
-  <div class="wrap">
-    <div class="cols">
-      <div>
-        <a class="brandmark" href="/">
-          <img src="/assets/logo.png" width="32" height="32" alt="" aria-hidden="true">
-          <span>Saha46</span>
-        </a>
-        <p>Kahramanmaraş'taki halı saha takımları için rakip bulma uygulaması.</p>
+      <a class="btn" id="open" href="#">Uygulamada aç</a>
+      <button class="btn secondary" id="copy" type="button">Kodu kopyala</button>
+      <p class="state" id="state" role="status" aria-live="polite"></p>
+
+      <div class="stores" id="stores">
+        <a class="btn secondary" id="ios" href="#">App Store’dan indir</a>
+        <a class="btn secondary" id="android" href="#">Google Play’den indir</a>
       </div>
-      <div>
-        <h4>Site</h4>
-        <ul>
-          <li><a href="/#ozellikler">Özellikler</a></li>
-          <li><a href="/#sss">SSS</a></li>
-          <li><a href="/destek/">Destek</a></li>
-        </ul>
-      </div>
-      <div>
-        <h4>Yasal</h4>
-        <ul>
-          <li><a href="/gizlilik/">Gizlilik Politikası</a></li>
-          <li><a href="/kosullar/">Kullanım Koşulları</a></li>
-          <li><a href="/hesap-silme/">Hesap Silme</a></li>
-          <li><a href="mailto:destek@saha46.app">destek@saha46.app</a></li>
-        </ul>
-      </div>
+
+      <p class="note">
+        Uygulama açılmazsa kurulu olmayabilir. Uygulamayı indirip bu kodu
+        <strong>Takımım → Takıma katıl</strong> ekranına gir.
+      </p>
     </div>
-    <p class="copyright">© 2026 Saha46 · Osman Ali Elma. Tüm hakları saklıdır.</p>
-  </div>
-</footer>
+  </main>
 
-<script>
-// Mağaza bağlantıları yayına çıkınca burayı doldur.
-var APP_STORE = "#";
-var GOOGLE_PLAY = "#";
+  <script>
+    (function () {
+      // Kod iki biçimde gelebilir: /davet/MS-4A43 ya da /davet/?kod=MS-4A43
+      var yol = decodeURIComponent(location.pathname).split('/').filter(Boolean);
+      var ham = (yol[0] === 'davet' && yol[1])
+        ? yol[1]
+        : (new URLSearchParams(location.search).get('kod') || '');
 
-(function () {
-  // Kodu adresten al: /davet/ASK-4X7K  ya da  /davet/?kod=ASK-4X7K
-  var yol = decodeURIComponent(location.pathname).split("/").filter(Boolean);
-  var ham = yol[0] === "davet" && yol[1] ? yol[1] : (new URLSearchParams(location.search).get("kod") || "");
-  var kod = ham.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 24);
+      // Yalnızca büyük harf, rakam ve tire kalsın: adresten gelen değer
+      // doğrudan sayfaya yazıldığı için süzülmesi şart.
+      var kod = ham.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 24);
 
-  var kodEl = document.getElementById("kod");
-  var magaza = document.getElementById("magaza");
-  var uygulamada = document.getElementById("uygulamada");
-  var kopyala = document.getElementById("kopyala");
-  var durum = document.getElementById("durum");
+      var codeEl = document.getElementById('code');
+      var link = document.getElementById('open');
+      var copy = document.getElementById('copy');
+      var state = document.getElementById('state');
 
-  if (kod) {
-    kodEl.textContent = kod;
-    uygulamada.href = "saha46://davet/" + encodeURIComponent(kod);
-    uygulamada.hidden = false;
-  } else {
-    kodEl.textContent = "Kod bulunamadı";
-    kodEl.style.fontSize = "22px";
-    uygulamada.hidden = true;
-    kopyala.hidden = true;
-  }
+      if (!kod) {
+        document.getElementById('title').textContent = 'Davet kodu bulunamadı';
+        document.getElementById('text').textContent =
+          'Bağlantı eksik ya da bozuk görünüyor. Seni davet eden takım arkadaşından yeni bir bağlantı iste.';
+        var box = document.getElementById('error');
+        box.textContent = 'Adreste geçerli bir katılım kodu yok.';
+        box.style.display = 'block';
+        document.getElementById('codeBox').style.display = 'none';
+        link.style.display = 'none';
+        copy.style.display = 'none';
+        document.getElementById('stores').style.display = 'block';
+        magazalariDoldur();
+        return;
+      }
 
-  // Cihaza göre mağaza
-  var ua = navigator.userAgent || "";
-  var ios = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-  var android = /Android/.test(ua);
-  if (ios && APP_STORE !== "#") {
-    magaza.href = APP_STORE;
-    magaza.textContent = "App Store'dan indir";
-  } else if (android && GOOGLE_PLAY !== "#") {
-    magaza.href = GOOGLE_PLAY;
-    magaza.textContent = "Google Play'den indir";
-  } else {
-    // Magaza baglantilari hazir degilken bos butona dokunma, tanitim sayfasina goturur.
-    magaza.href = "/";
-    magaza.textContent = "Saha46'yı tanı";
-  }
+      codeEl.textContent = kod;
+      var target = 'saha46://davet/' + encodeURIComponent(kod);
+      link.href = target;
 
-  kopyala.addEventListener("click", function () {
-    var bitir = function (ok) {
-      durum.textContent = ok ? "Kod kopyalandı." : "Kopyalanamadı, kodu elle yaz.";
-    };
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(kod).then(function () { bitir(true); }, function () { bitir(false); });
-    } else {
-      bitir(false);
-    }
-  });
-})();
-</script>
+      // Otomatik denemeyi bir kez yap; tarayıcı engellerse düğme zaten duruyor.
+      var opened = false;
+      link.addEventListener('click', function () { opened = true; });
+      setTimeout(function () { location.href = target; }, 300);
+
+      // Uygulama açılmadıysa mağaza seçeneklerini göster.
+      setTimeout(function () {
+        if (opened || document.hidden) return;
+        document.getElementById('stores').style.display = 'block';
+      }, 2500);
+
+      copy.addEventListener('click', function () {
+        function bitir(ok) {
+          state.textContent = ok ? 'Kod kopyalandı.' : 'Kopyalanamadı, kodu elle yaz.';
+          state.style.color = ok ? '#0B7A43' : '#CE2532';
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(kod).then(function () { bitir(true); }, function () { bitir(false); });
+        } else {
+          bitir(false);
+        }
+      });
+
+      magazalariDoldur();
+
+      // TODO: Mağaza bağlantıları yayına çıkınca doldurulacak.
+      function magazalariDoldur() {
+        document.getElementById('ios').href = 'https://apps.apple.com/tr/app/saha46/id000000000';
+        document.getElementById('android').href =
+          'https://play.google.com/store/apps/details?id=com.saha46.app';
+      }
+    })();
+  </script>
 </body>
 </html>

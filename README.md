@@ -28,9 +28,11 @@ derleme adımı yok, JavaScript yalnızca davet sayfasında.
    projesi kurulunca gerçek bölge adı yazılmalı (App Store'a çıkmadan
    önce zorunlu). Bölge Türkiye dışındaysa aynı sayfadaki yurt dışına
    aktarım uyarısı geçerlidir.
-3. **Mağaza bağlantıları** — `index.html` içindeki iki `store-btn`
-   bağlantısı (şimdilik `#` ve "Yakında" rozetli) ve `davet/index.html`
-   başındaki `APP_STORE` / `GOOGLE_PLAY` değişkenleri.
+3. **Mağaza bağlantıları** — üç yerde yer tutucu duruyor, hepsi `TODO`
+   ile işaretli: ana sayfadaki iki `store-btn` (şimdilik tıklanamaz,
+   "Yakında" rozetli), `davet/index.html` ve `giris-tamam.html`
+   dosyalarının sonundaki App Store / Google Play adresleri.
+
 4. ~~Ekran görüntüleri~~ — eklendi: `assets/ilanlar.jpeg`,
    `teklifler.jpeg`, `dizilis.jpeg`, `turnuvalar.jpeg` (~1000×2048).
    Yenilemek istersen aynı adla üzerine yaz; oran korunursa CSS'e
