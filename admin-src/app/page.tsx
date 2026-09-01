@@ -2,48 +2,57 @@
 
 import Link from 'next/link';
 import { useVeri } from '@/lib/durum';
-import { bugunMu, gecenSure } from '@/lib/bicim';
-import { BUGUN, GUN } from '@/lib/mock/sabitler';
-import { Arma, HEDEF_METNI, Rehber, Rozet, SEBEP_METNI, SayiKart } from '@/components/parcalar';
+import { bugunMu, gecenSure, sonGunlerde } from '@/lib/bicim';
+import {
+  Arma,
+  HataKutusu,
+  Rehber,
+  Rozet,
+  SayiKart,
+  Yukleniyor,
+  hedefMetni,
+  sebepMetni,
+} from '@/components/parcalar';
 
 export default function OzetSayfasi() {
   const veri = useVeri();
 
   const acikSikayetler = veri.sikayetler.filter((r) => r.status === 'open');
-  const acikGelmeme = veri.maclar.filter((m) => m.noShow);
-  const bugunkuIlanlar = veri.ilanlar.filter((i) => bugunMu(i.createdAt));
-  const haftalikMac = veri.maclar.filter(
-    (m) => m.status !== 'cancelled' && m.createdAt >= BUGUN - 7 * GUN,
-  );
+  const acikGelmeme = veri.degerlendirmeler.filter((d) => d.no_show);
+  const bugunkuIlanlar = veri.ilanlar.filter((i) => bugunMu(i.created_at));
+  const haftalikMac = veri.maclar.filter((m) => m.status !== 'cancelled' && sonGunlerde(m.created_at, 7));
 
-  /** Aynı hedef hakkında birden fazla açık şikayet varsa önce o ele alınmalı. */
-  const tekrarSayisi = (tur: string, id: string) =>
-    veri.sikayetler.filter((r) => r.targetType === tur && r.targetId === id).length;
+  const takim = (id: string | null) => veri.takimlar.find((t) => t.id === id);
+  const kisi = (id: string | null) => veri.profiller.find((p) => p.id === id);
 
-  const sonSikayetler = [...acikSikayetler]
+  /** Aynı hedef hakkında birden fazla şikayet varsa önce o ele alınmalı. */
+  const tekrar = (tur: string, id: string) =>
+    veri.sikayetler.filter((r) => r.target_type === tur && r.target_id === id).length;
+
+  const hedefAdi = (tur: string, id: string) => {
+    if (tur === 'team') return takim(id)?.name ?? 'Silinmiş takım';
+    if (tur === 'profile') return kisi(id)?.name || kisi(id)?.email || 'Silinmiş kullanıcı';
+    if (tur === 'listing') {
+      const ilan = veri.ilanlar.find((i) => i.id === id);
+      return ilan ? `${ilan.pitch} · ${ilan.date_text}` : 'Kaldırılmış ilan';
+    }
+    return id.slice(0, 8);
+  };
+
+  const oncelikliSikayetler = [...acikSikayetler]
     .sort(
       (a, b) =>
-        tekrarSayisi(b.targetType, b.targetId) - tekrarSayisi(a.targetType, a.targetId) ||
-        b.createdAt - a.createdAt,
+        tekrar(b.target_type, b.target_id) - tekrar(a.target_type, a.target_id) ||
+        Date.parse(b.created_at) - Date.parse(a.created_at),
     )
     .slice(0, 6);
 
-  const sonKayitlar = [...veri.kayitlar].sort((a, b) => b.createdAt - a.createdAt).slice(0, 8);
+  const sonKayitlar = veri.kayitlar.slice(0, 8);
+  const bekleyenIs = acikSikayetler.length + acikGelmeme.length;
 
-  const kisiAdi = (id: string) => veri.profiller.find((p) => p.id === id)?.name ?? 'Silinmiş kullanıcı';
-  const takim = (id: string) => veri.takimlar.find((t) => t.id === id);
-  const hedefAdi = (tur: string, id: string) => {
-    if (tur === 'team') return takim(id)?.name ?? id;
-    if (tur === 'profile') return veri.profiller.find((p) => p.id === id)?.name ?? id;
-    if (tur === 'listing') {
-      const ilan = veri.ilanlar.find((i) => i.id === id);
-      return ilan ? `${ilan.pitch} · ${ilan.date}` : 'Kaldırılmış ilan';
-    }
-    return id;
-  };
-
-  const bekleyenBasvuru = veri.basvurular.filter((b) => b.status === 'pending').length;
-  const isVar = acikSikayetler.length + acikGelmeme.length + bekleyenBasvuru;
+  if (veri.yukleniyor && veri.profiller.length === 0) {
+    return <Yukleniyor />;
+  }
 
   return (
     <>
@@ -59,15 +68,17 @@ export default function OzetSayfasi() {
         </div>
       </div>
 
-      <Rehber baslik={isVar > 0 ? `Bekleyen ${isVar} iş var` : 'Kuyruk temiz'}>
-        {isVar > 0 ? (
+      {veri.hata && <HataKutusu hata={veri.hata} yenile={() => void veri.yenile()} />}
+
+      <Rehber baslik={bekleyenIs > 0 ? `Bekleyen ${bekleyenIs} iş var` : 'Kuyruk temiz'}>
+        {bekleyenIs > 0 ? (
           <>
             Önce <strong>şikayetleri</strong> sonuçlandırın, ardından{' '}
-            <strong>gelmeme bildirimlerini</strong> değerlendirin. Aynı takım hakkında birden fazla
+            <strong>gelmeme bildirimlerini</strong> değerlendirin. Aynı hedef hakkında birden fazla
             kayıt varsa listede üstte görünür.
           </>
         ) : (
-          <>Sonuçlandırılmayı bekleyen şikayet, bildirim veya başvuru yok.</>
+          <>Sonuçlandırılmayı bekleyen şikayet ya da bildirim yok.</>
         )}
       </Rehber>
 
@@ -81,7 +92,7 @@ export default function OzetSayfasi() {
           gitMetni="Kuyruğu aç"
         />
         <SayiKart
-          baslik="Açık gelmeme bildirimi"
+          baslik="Gelmeme bildirimi"
           deger={acikGelmeme.length}
           alt="Sahaya gelmediği bildirilen maçlar"
           ton={acikGelmeme.length > 0 ? 'vurgu' : 'iyi'}
@@ -95,11 +106,7 @@ export default function OzetSayfasi() {
           git="/ilanlar"
           gitMetni="İlanları aç"
         />
-        <SayiKart
-          baslik="Haftalık eşleşen maç"
-          deger={haftalikMac.length}
-          alt="Son 7 günde kesinleşti"
-        />
+        <SayiKart baslik="Haftalık eşleşen maç" deger={haftalikMac.length} alt="Son 7 günde kesinleşti" />
       </div>
 
       <div className="ikili">
@@ -114,30 +121,31 @@ export default function OzetSayfasi() {
             Birden fazla şikayet almış hedefler en üstte. Ayrıntı için şikayet ekranında satıra tıklayın.
           </div>
           <div className="mini-liste">
-            {sonSikayetler.length === 0 && (
+            {oncelikliSikayetler.length === 0 && (
               <div className="bos-hal">
                 <div className="simge" aria-hidden="true">✓</div>
                 <strong>Bekleyen şikayet yok</strong>
                 <p>Yeni bir bildirim geldiğinde burada görünür.</p>
               </div>
             )}
-            {sonSikayetler.map((r) => {
-              const tekrar = tekrarSayisi(r.targetType, r.targetId);
+            {oncelikliSikayetler.map((r) => {
+              const adet = tekrar(r.target_type, r.target_id);
               return (
                 <div className="mini-oge" key={r.id}>
-                  {r.targetType === 'team' && <Arma takim={takim(r.targetId)} boyut={34} />}
+                  {r.target_type === 'team' && <Arma takim={takim(r.target_id)} boyut={34} />}
                   <div className="govde">
                     <strong>
-                      {SEBEP_METNI[r.reason]} · {hedefAdi(r.targetType, r.targetId)}
+                      {sebepMetni(r.reason)} · {hedefAdi(r.target_type, r.target_id)}
                     </strong>
                     <p>{r.detail}</p>
                     <p className="silik" style={{ fontSize: 12, marginTop: 4 }}>
-                      {HEDEF_METNI[r.targetType]} · Bildiren: {kisiAdi(r.reporterId)}
+                      {hedefMetni(r.target_type)} · Bildiren:{' '}
+                      {kisi(r.reporter_id)?.name || 'Bilinmeyen'}
                     </p>
                   </div>
                   <div style={{ display: 'grid', gap: 6, justifyItems: 'end' }}>
-                    {tekrar > 1 ? <Rozet ton="kirmizi">{tekrar}. şikayet</Rozet> : <Rozet ton="uyari">Açık</Rozet>}
-                    <time>{gecenSure(r.createdAt)}</time>
+                    {adet > 1 ? <Rozet ton="kirmizi">{adet}. şikayet</Rozet> : <Rozet ton="uyari">Açık</Rozet>}
+                    <time>{gecenSure(r.created_at)}</time>
                   </div>
                 </div>
               );
@@ -154,16 +162,23 @@ export default function OzetSayfasi() {
           </div>
           <div className="bolum-not">Panelde yapılan her işlem kalıcı olarak kaydedilir.</div>
           <div className="mini-liste">
+            {sonKayitlar.length === 0 && (
+              <div className="bos-hal">
+                <div className="simge" aria-hidden="true">—</div>
+                <strong>Henüz işlem yok</strong>
+                <p>Yaptığınız ilk yaptırım burada görünecek.</p>
+              </div>
+            )}
             {sonKayitlar.map((k) => (
               <div className="mini-oge" key={k.id}>
                 <div className="govde">
                   <strong>{k.action}</strong>
                   <p>
-                    {k.adminName}
+                    {kisi(k.admin_id)?.name || 'Yönetici'}
                     {k.note ? ` · ${k.note}` : ''}
                   </p>
                 </div>
-                <time>{gecenSure(k.createdAt)}</time>
+                <time>{gecenSure(k.created_at)}</time>
               </div>
             ))}
           </div>

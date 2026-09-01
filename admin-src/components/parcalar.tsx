@@ -4,15 +4,14 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import type { Listing, ListingKind, Report, Team } from '@/lib/tipler';
+import type { IlanTuru, SikayetDurumu, Team } from '@/lib/tipler';
 
 /* --- Rozet ---------------------------------------------------------------- */
 
 type RozetTonu = 'notr' | 'teal' | 'yesil' | 'uyari' | 'kirmizi' | 'dolu';
 
 export function Rozet({ ton = 'notr', children }: { ton?: RozetTonu; children: ReactNode }) {
-  const sinif = ton === 'notr' ? 'rozet' : `rozet ${ton}`;
-  return <span className={sinif}>{children}</span>;
+  return <span className={ton === 'notr' ? 'rozet' : `rozet ${ton}`}>{children}</span>;
 }
 
 /* --- Takım arması --------------------------------------------------------- */
@@ -20,30 +19,31 @@ export function Rozet({ ton = 'notr', children }: { ton?: RozetTonu; children: R
 export function Arma({ takim, boyut = 32 }: { takim?: Team; boyut?: number }) {
   if (!takim) {
     return (
-      <span className="arma" style={{ background: 'var(--line-strong)', width: boyut, height: boyut }} aria-hidden="true">
+      <span
+        className="arma"
+        style={{ background: 'var(--line-strong)', width: boyut, height: boyut }}
+        aria-hidden="true"
+      >
         ?
       </span>
     );
   }
+  // Takımın yüklediği arma varsa onu göster, yoksa renk + kısaltma.
+  if (takim.logo_url) {
+    return (
+      <img
+        className="arma"
+        src={takim.logo_url}
+        alt=""
+        width={boyut}
+        height={boyut}
+        style={{ width: boyut, height: boyut, objectFit: 'cover' }}
+      />
+    );
+  }
   return (
-    <span
-      className="arma"
-      style={{ background: takim.color, width: boyut, height: boyut }}
-      aria-hidden="true"
-    >
+    <span className="arma" style={{ background: takim.color, width: boyut, height: boyut }} aria-hidden="true">
       {takim.short}
-    </span>
-  );
-}
-
-export function TakimHucre({ takim }: { takim?: Team }) {
-  return (
-    <span className="takim-hucre">
-      <Arma takim={takim} />
-      <span>
-        <strong>{takim?.name ?? 'Bilinmeyen takım'}</strong>
-        {takim && <div className="silik" style={{ fontSize: 12 }}>{takim.district} · {takim.level}</div>}
-      </span>
     </span>
   );
 }
@@ -62,7 +62,6 @@ export function SayiKart({
   deger: number | string;
   alt?: string;
   ton?: 'vurgu' | 'iyi';
-  /** Verilirse kart tıklanabilir olur ve bu adrese götürür. */
   git?: string;
   gitMetni?: string;
 }) {
@@ -75,17 +74,17 @@ export function SayiKart({
     </>
   );
   const sinif = `sayi-kart${ton ? ` ${ton}` : ''}`;
-  if (git) {
-    return (
-      <Link className={sinif} href={git}>
-        {govde}
-      </Link>
-    );
-  }
-  return <div className={sinif}>{govde}</div>;
+  return git ? (
+    <Link className={sinif} href={git}>
+      {govde}
+    </Link>
+  ) : (
+    <div className={sinif}>{govde}</div>
+  );
 }
 
-/** Ekranın ne işe yaradığını ve nasıl kullanılacağını anlatan şerit. */
+/* --- Bilgilendirme -------------------------------------------------------- */
+
 export function Rehber({ baslik, children }: { baslik: string; children: ReactNode }) {
   return (
     <div className="rehber">
@@ -98,7 +97,6 @@ export function Rehber({ baslik, children }: { baslik: string; children: ReactNo
   );
 }
 
-/** Tablo içinde boş durum. */
 export function BosHal({ baslik, aciklama, sutun = 12 }: { baslik: string; aciklama: string; sutun?: number }) {
   return (
     <tr>
@@ -113,43 +111,87 @@ export function BosHal({ baslik, aciklama, sutun = 12 }: { baslik: string; acikl
   );
 }
 
-/** Yan panelde açıklamalı eylem düğmesi. */
 export function Eylem({
   ad,
   ne,
   tehlikeli,
+  kapali,
   tikla,
 }: {
   ad: string;
   ne: string;
   tehlikeli?: boolean;
+  kapali?: boolean;
   tikla: () => void;
 }) {
   return (
-    <button type="button" className={`eylem${tehlikeli ? ' tehlikeli' : ''}`} onClick={tikla}>
+    <button
+      type="button"
+      className={`eylem${tehlikeli ? ' tehlikeli' : ''}`}
+      onClick={tikla}
+      disabled={kapali}
+      style={kapali ? { opacity: 0.55, cursor: 'default' } : undefined}
+    >
       <span className="ad">{ad}</span>
       <span className="ne">{ne}</span>
     </button>
   );
 }
 
+/* --- Yükleniyor / hata ---------------------------------------------------- */
+
+export function Yukleniyor({ metin = 'Veriler yükleniyor…' }: { metin?: string }) {
+  return (
+    <div className="bos-hal">
+      <div className="simge" aria-hidden="true">…</div>
+      <strong>{metin}</strong>
+    </div>
+  );
+}
+
+export function HataKutusu({ hata, yenile }: { hata: string; yenile?: () => void }) {
+  return (
+    <div className="kutu kirmizi" style={{ marginBottom: 20 }}>
+      <h4>Veri alınamadı</h4>
+      {hata}
+      {yenile && (
+        <div style={{ marginTop: 10 }}>
+          <button type="button" className="btn btn-cizgi btn-kucuk" onClick={yenile}>
+            Yeniden dene
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* --- Durum ve tür etiketleri ---------------------------------------------- */
 
-export function SikayetDurumu({ durum }: { durum: Report['status'] }) {
+export function SikayetRozeti({ durum }: { durum: SikayetDurumu }) {
   if (durum === 'open') return <Rozet ton="kirmizi">Açık</Rozet>;
   if (durum === 'resolved') return <Rozet ton="yesil">Çözüldü</Rozet>;
   return <Rozet>Reddedildi</Rozet>;
 }
 
-export const SEBEP_METNI: Record<Report['reason'], string> = {
+/** reports.reason serbest metindir; bilinen değerler çevrilir, diğerleri olduğu gibi gösterilir. */
+const SEBEPLER: Record<string, string> = {
   'sahte-ilan': 'Sahte ilan',
   hakaret: 'Hakaret',
   taciz: 'Taciz',
   spam: 'Spam',
   diger: 'Diğer',
 };
+export const sebepMetni = (deger: string) => SEBEPLER[deger] ?? deger;
 
-export const TUR_METNI: Record<ListingKind, string> = {
+const HEDEFLER: Record<string, string> = {
+  team: 'Takım',
+  profile: 'Kullanıcı',
+  listing: 'İlan',
+  match: 'Maç',
+};
+export const hedefMetni = (deger: string) => HEDEFLER[deger] ?? deger;
+
+export const TUR_METNI: Record<IlanTuru, string> = {
   rakip: 'Rakip arıyor',
   oyuncu: 'Oyuncu arıyor',
   kaleci: 'Kaleci arıyor',
@@ -157,30 +199,7 @@ export const TUR_METNI: Record<ListingKind, string> = {
   kiralik: 'Kiralık oyuncu',
 };
 
-export const HEDEF_METNI: Record<Report['targetType'], string> = {
-  team: 'Takım',
-  profile: 'Kullanıcı',
-  listing: 'İlan',
-};
-
-export function IlanTuru({ tur }: { tur: ListingKind }) {
+export function IlanTuruRozeti({ tur }: { tur: IlanTuru }) {
   const ton: RozetTonu = tur === 'rakip' ? 'teal' : tur === 'kiralik' ? 'yesil' : 'notr';
-  return <Rozet ton={ton}>{TUR_METNI[tur]}</Rozet>;
-}
-
-export function IlanBasligi({ ilan }: { ilan: Listing }) {
-  if (ilan.kind === 'kiralik') return <>{ilan.playerName ?? 'Kiralık oyuncu'}</>;
-  return <>{ilan.pitch}</>;
-}
-
-/* --- Boş durum ------------------------------------------------------------ */
-
-export function BosDurum({ metin }: { metin: string }) {
-  return (
-    <tr>
-      <td className="bos-satir" colSpan={12}>
-        {metin}
-      </td>
-    </tr>
-  );
+  return <Rozet ton={ton}>{TUR_METNI[tur] ?? tur}</Rozet>;
 }

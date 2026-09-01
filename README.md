@@ -181,9 +181,9 @@ saf marka renkleri beyaz üzerinde 4.5:1 kontrastı tutturmaz.
 Kaynak: `admin-src/` (Next.js 16 App Router + TypeScript).
 Yayınlanan çıktı: `admin/` (statik HTML, elle düzenlenmez).
 
-**Ekranlardaki veriler sahtedir, giriş gerçektir.** Kimlik doğrulama
-Supabase üzerinden yapılır; ekranlarda görünen kayıtlar hâlâ
-`lib/mock/veri.ts` içinden gelir.
+**Panel canlı veriyle çalışır.** Kimlik doğrulama ve tüm veriler
+Supabase'ten gelir; yapılan her işlem kalıcıdır ve `audit_log` tablosuna
+yazılır.
 Onayla / reddet / askıya al işlemleri listeleri gerçekten günceller, ancak
 yalnızca bellekte: sayfa yenilenince başlangıç durumuna döner. Her sayfanın
 üstünde bunu söyleyen kalıcı bir şerit vardır.
@@ -222,17 +222,44 @@ Arayüzdeki denetim yalnızca ekranı gizler; asıl koruma RLS'tedir. Panelin bi
 
 ### Ekranlar
 
-| Yol | İşlev |
-| --- | --- |
-| `/admin/giris` | Yönetici girişi (Supabase, gerçek) |
-| `/admin` | Özet — 4 sayı kartı, bekleyen şikayetler, son işlemler |
-| `/admin/sikayetler` | Ana iş kuyruğu: filtre, yan panel, hedef geçmişi, aksiyonlar |
-| `/admin/gelmeyenler` | Takıma göre gruplanmış gelmeme bildirimleri |
-| `/admin/ilanlar` | Tüm ilanlar, Türkçe karakter duyarlı arama |
-| `/admin/kullanicilar` | Kullanıcı ve takım sekmeleri + detay sayfaları |
-| `/admin/turnuvalar` | Turnuvalar, başvuru kararları, yeni turnuva formu |
-| `/admin/duyuru` | Duyuru hazırlama ve önizleme (gönderim sahte) |
-| `/admin/kayitlar` | İşlem kaydı (audit log) |
+| Yol | İşlev | Kaynak |
+| --- | --- | --- |
+| `/admin/giris` | Yönetici girişi | `auth` + `profiles.role` |
+| `/admin` | Özet — sayı kartları, öncelikli şikayetler, son işlemler | türetilmiş |
+| `/admin/sikayetler` | Ana iş kuyruğu | `reports` |
+| `/admin/gelmeyenler` | Gelmeme bildirimleri, takıma göre gruplu | `match_ratings.no_show` |
+| `/admin/ilanlar` | Tüm ilanlar, Türkçe duyarlı arama | `listings` |
+| `/admin/kullanicilar` | Kullanıcı ve takım sekmeleri, yan panelde ayrıntı | `profiles`, `teams`, `team_members` |
+| `/admin/kayitlar` | İşlem kaydı | `audit_log` |
+
+Turnuvalar ve duyuru ekranları kaldırıldı: `tournaments` ile
+`tournament_entries` tabloları `0007` ile düşürüldü, duyuru için de tablo
+yok.
+
+### Yazma işlemleri ve RLS
+
+Panel `service_role` kullanmaz; her istek giriş yapan yöneticinin
+oturumuyla gider ve RLS'teki `is_admin()` dallarından geçer.
+
+| İşlem | Tablo | Durum |
+| --- | --- | --- |
+| Şikayet çöz / reddet | `reports` update | çalışıyor |
+| İlan kaldır (`is_open = false`) | `listings` update | çalışıyor |
+| Askıya al / askıyı kaldır | `profiles` update | çalışıyor |
+| Yönetici yetkisi ver / al | `profiles` update | çalışıyor |
+| Uyarı, ilan kısıtı | `audit_log` insert | yalnızca kayda geçer |
+
+**Şema desteği bekleyen iki iş:**
+
+1. *Gelmeme bildirimini geçersiz sayma.* `match_ratings` yazma politikası
+   `with check (is_team_member(rater_team_id) and ...)` diyor; `is_admin()`
+   yok, bu yüzden yönetici haksız bir bildirimi kaldıramıyor. Arayüzde
+   neden yapılamadığı yazılı.
+2. *İlan verme kısıtı.* Takımı kısıtlayacak bir alan yok; karar yalnızca
+   `audit_log`'a yazılıyor, ilan vermeyi teknik olarak engellemiyor.
+
+Hesap silme panelde yok: `profiles` için delete politikası yok ve olmamalı —
+kullanıcı hesabını uygulamadaki `delete_my_account` RPC'siyle kendisi siler.
 
 ### Kod düzeni
 

@@ -3,103 +3,107 @@
 import { useMemo, useState } from 'react';
 import { useVeri } from '@/lib/durum';
 import { gecenSure, tarih, tarihSaat } from '@/lib/bicim';
-import type { Report } from '@/lib/tipler';
+import type { Report, SikayetDurumu } from '@/lib/tipler';
 import { OnayDiyalogu, type OnayIstegi } from '@/components/OnayDiyalogu';
 import { YanPanel, Satir } from '@/components/YanPanel';
 import {
   Arma,
   BosHal,
   Eylem,
-  HEDEF_METNI,
+  HataKutusu,
   Rehber,
   Rozet,
-  SEBEP_METNI,
-  SikayetDurumu,
+  SikayetRozeti,
+  Yukleniyor,
+  hedefMetni,
+  sebepMetni,
 } from '@/components/parcalar';
-
-const SEBEPLER: Report['reason'][] = ['sahte-ilan', 'hakaret', 'taciz', 'spam', 'diger'];
 
 export default function SikayetlerSayfasi() {
   const veri = useVeri();
-  const [durumSuzgeci, setDurumSuzgeci] = useState<'hepsi' | Report['status']>('open');
-  const [sebepSuzgeci, setSebepSuzgeci] = useState<'hepsi' | Report['reason']>('hepsi');
+  const [durumSuzgeci, setDurumSuzgeci] = useState<'hepsi' | SikayetDurumu>('open');
+  const [sebepSuzgeci, setSebepSuzgeci] = useState<string>('hepsi');
   const [baslangic, setBaslangic] = useState('');
   const [bitis, setBitis] = useState('');
-  const [secili, setSecili] = useState<Report | null>(null);
+  const [seciliId, setSeciliId] = useState<string | null>(null);
   const [onay, setOnay] = useState<OnayIstegi | null>(null);
 
-  const kisi = (id: string) => veri.profiller.find((p) => p.id === id);
+  const kisi = (id: string | null) => veri.profiller.find((p) => p.id === id);
   const takim = (id: string) => veri.takimlar.find((t) => t.id === id);
   const ilan = (id: string) => veri.ilanlar.find((i) => i.id === id);
 
   const hedefAdi = (r: Report) => {
-    if (r.targetType === 'team') return takim(r.targetId)?.name ?? 'Silinmiş takım';
-    if (r.targetType === 'profile') return kisi(r.targetId)?.name ?? 'Silinmiş kullanıcı';
-    const i = ilan(r.targetId);
-    return i ? `${i.pitch} · ${i.date} ${i.time}` : 'Kaldırılmış ilan';
+    if (r.target_type === 'team') return takim(r.target_id)?.name ?? 'Silinmiş takım';
+    if (r.target_type === 'profile') {
+      const p = kisi(r.target_id);
+      return p?.name || p?.email || 'Silinmiş kullanıcı';
+    }
+    const i = ilan(r.target_id);
+    return i ? `${i.pitch} · ${i.date_text} ${i.time_text}` : 'Kaldırılmış ilan';
   };
 
-  /** Hedefin daha önce kaç şikayet aldığı — kararı verirken en önemli bilgi. */
-  const hedefGecmisi = (r: Report) =>
-    veri.sikayetler.filter((x) => x.targetType === r.targetType && x.targetId === r.targetId);
+  const gecmis = (r: Report) =>
+    veri.sikayetler.filter((x) => x.target_type === r.target_type && x.target_id === r.target_id);
+
+  /** Şikayet sebepleri veride serbest metin; filtre seçenekleri veriden türetilir. */
+  const sebepler = useMemo(
+    () => [...new Set(veri.sikayetler.map((r) => r.reason))].sort((a, b) => a.localeCompare(b, 'tr')),
+    [veri.sikayetler],
+  );
 
   const liste = useMemo(() => {
     const bas = baslangic ? Date.parse(`${baslangic}T00:00:00+03:00`) : null;
     const bit = bitis ? Date.parse(`${bitis}T23:59:59+03:00`) : null;
-    const sayisi = (r: Report) =>
-      veri.sikayetler.filter((x) => x.targetType === r.targetType && x.targetId === r.targetId).length;
+    const sayi = (r: Report) =>
+      veri.sikayetler.filter((x) => x.target_type === r.target_type && x.target_id === r.target_id).length;
 
     return veri.sikayetler
       .filter((r) => (durumSuzgeci === 'hepsi' ? true : r.status === durumSuzgeci))
       .filter((r) => (sebepSuzgeci === 'hepsi' ? true : r.reason === sebepSuzgeci))
-      .filter((r) => (bas === null || r.createdAt >= bas) && (bit === null || r.createdAt <= bit))
+      .filter((r) => {
+        const t = Date.parse(r.created_at);
+        return (bas === null || t >= bas) && (bit === null || t <= bit);
+      })
       // Tekrar eden hedefler öne alınır; kuyruğun sırası kararın sırasıdır.
-      .sort((a, b) => sayisi(b) - sayisi(a) || b.createdAt - a.createdAt);
+      .sort((a, b) => sayi(b) - sayi(a) || Date.parse(b.created_at) - Date.parse(a.created_at));
   }, [veri.sikayetler, durumSuzgeci, sebepSuzgeci, baslangic, bitis]);
 
+  const acik = seciliId ? veri.sikayetler.find((r) => r.id === seciliId) ?? null : null;
   const acikSayisi = veri.sikayetler.filter((r) => r.status === 'open').length;
-  const tekrarEdenler = useMemo(() => {
-    const acik = veri.sikayetler.filter((r) => r.status === 'open');
-    return acik.filter((r) => hedefGecmisi(r).length > 1).length;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [veri.sikayetler]);
+  const tekrarEden = veri.sikayetler.filter((r) => r.status === 'open' && gecmis(r).length > 1).length;
 
-  // Yan panel açıkken listedeki güncel kaydı göster.
-  const acikKayit = secili ? veri.sikayetler.find((r) => r.id === secili.id) ?? null : null;
-  const kapat = () => setSecili(null);
-
-  const eylemler = acikKayit
+  const eylemler = acik
     ? [
         {
           ad: 'Uyarı gönder',
-          ne: 'Hedefe uygulama içi uyarı gider, şikayet çözüldü sayılır.',
+          ne: 'Şikayet çözüldü sayılır, gerekçe işlem kaydına yazılır.',
           tehlikeli: false,
           istek: (): OnayIstegi => ({
-            baslik: 'Uyarı gönderilsin mi?',
-            aciklama: `${hedefAdi(acikKayit)} hedefine uyarı gönderilecek.`,
+            baslik: 'Uyarı kaydı oluşturulsun mu?',
+            aciklama: `${hedefAdi(acik)} için uyarı kaydedilecek ve şikayet kapanacak.`,
             onayMetni: 'Uyarı gönder',
             sonuclar: [
-              'Hedefe uygulama içi bildirim gider.',
               'Şikayet "çözüldü" olarak kapanır.',
-              'İşlem kaydına yazdığınız gerekçeyle düşer.',
+              'Gerekçe işlem kaydına yazılır.',
+              'Uygulama içi bildirim gönderilmez — bildirim altyapısı panelde yok.',
             ],
-            notEtiketi: 'Uyarı metni',
+            notEtiketi: 'Uyarı gerekçesi',
             notZorunlu: true,
             notOnerileri: [
               'İlan kurallarına aykırı davranış tespit edildi.',
-              'Sahaya gelmeme bildirimi alındı, tekrarı hâlinde kısıtlama uygulanır.',
+              'Tekrarı hâlinde kısıtlama uygulanacaktır.',
             ],
-            uygula: (not) => {
-              veri.uyariGonder(acikKayit.targetType, acikKayit.targetId, not);
-              veri.sikayetiCoz(acikKayit.id, 'Uyarı gönderildi.', not);
+            uygula: async (not) => {
+              await veri.uyariGonder(acik.target_type, acik.target_id, not);
+              await veri.sikayetiCoz(acik.id, 'Uyarı gönderildi.', not);
             },
           }),
         },
-        ...(acikKayit.targetType === 'listing' && ilan(acikKayit.targetId)
+        ...(acik.target_type === 'listing' && ilan(acik.target_id)
           ? [
               {
                 ad: 'İlanı kaldır',
-                ne: 'İlan yayından çıkar, bir daha görünmez.',
+                ne: 'İlan yayından kalkar, teklif alamaz.',
                 tehlikeli: true,
                 istek: (): OnayIstegi => ({
                   baslik: 'İlan kaldırılsın mı?',
@@ -107,70 +111,70 @@ export default function SikayetlerSayfasi() {
                   onayMetni: 'İlanı kaldır',
                   tehlikeli: true,
                   sonuclar: [
-                    'İlan listelerden kaldırılır.',
-                    'İlan sahibi bildirim alır.',
+                    'İlan listelerden kalkar ve yeni teklif alamaz.',
+                    'Kayıt silinmez; geçmiş ve şikayet bağı korunur.',
                     'Şikayet "çözüldü" olarak kapanır.',
                   ],
                   notEtiketi: 'Kaldırma gerekçesi',
                   notZorunlu: true,
                   notOnerileri: ['Sahte ilan', 'Spam', 'Yanıltıcı bilgi'],
-                  uygula: (not) => {
-                    veri.ilaniKaldir(acikKayit.targetId, not);
-                    veri.sikayetiCoz(acikKayit.id, 'İlan kaldırıldı.', not);
+                  uygula: async (not) => {
+                    await veri.ilaniKaldir(acik.target_id, not);
+                    await veri.sikayetiCoz(acik.id, 'İlan kaldırıldı.', not);
                   },
                 }),
               },
             ]
           : []),
-        ...(acikKayit.targetType === 'profile' && kisi(acikKayit.targetId)?.status === 'active'
+        ...(acik.target_type === 'profile' && kisi(acik.target_id)?.status === 'active'
           ? [
               {
                 ad: 'Kullanıcıyı askıya al',
-                ne: 'Hesap kapanır; ilan veremez, teklif gönderemez.',
+                ne: 'Hesap askıya alınır; uygulamada işlem yapamaz.',
                 tehlikeli: true,
                 istek: (): OnayIstegi => ({
                   baslik: 'Kullanıcı askıya alınsın mı?',
-                  aciklama: `${hedefAdi(acikKayit)} hesabı askıya alınacak.`,
+                  aciklama: `${hedefAdi(acik)} hesabı askıya alınacak.`,
                   onayMetni: 'Askıya al',
                   tehlikeli: true,
                   sonuclar: [
-                    'Kullanıcı ilan veremez ve teklif gönderemez.',
-                    'Mevcut ilanları yayında kalmaz.',
-                    'Askı, panelden istendiği an kaldırılabilir.',
+                    'Hesabın durumu "askıda" olur.',
+                    'Askı panelden istendiği an kaldırılabilir.',
+                    'Şikayet "çözüldü" olarak kapanır.',
                   ],
                   notEtiketi: 'Askıya alma gerekçesi',
                   notZorunlu: true,
                   notOnerileri: ['Tekrarlanan sahte ilan', 'Mesajlarda hakaret', 'Taciz'],
-                  uygula: (not) => {
-                    veri.kullaniciAskiyaAl(acikKayit.targetId, not);
-                    veri.sikayetiCoz(acikKayit.id, 'Kullanıcı askıya alındı.', not);
+                  uygula: async (not) => {
+                    await veri.kullaniciAskiyaAl(acik.target_id, not);
+                    await veri.sikayetiCoz(acik.id, 'Kullanıcı askıya alındı.', not);
                   },
                 }),
               },
             ]
           : []),
-        ...(acikKayit.targetType === 'team'
+        ...(acik.target_type === 'team'
           ? [
               {
-                ad: 'İlan vermeyi kısıtla',
-                ne: 'Takım belirtilen süre boyunca yeni ilan veremez.',
+                ad: 'İlan kısıtı kaydet',
+                ne: 'Kayda geçer; kısıtlama için şema desteği henüz yok.',
                 tehlikeli: true,
                 istek: (): OnayIstegi => ({
-                  baslik: 'Takımın ilan vermesi kısıtlansın mı?',
-                  aciklama: `${hedefAdi(acikKayit)} bir süre yeni ilan veremeyecek.`,
-                  onayMetni: 'Kısıtla',
+                  baslik: 'İlan kısıtı kaydedilsin mi?',
+                  aciklama: `${hedefAdi(acik)} için kısıtlama kararı işlem kaydına yazılacak.`,
+                  onayMetni: 'Kaydet',
                   tehlikeli: true,
                   sonuclar: [
-                    'Takım yeni ilan veremez.',
-                    'Mevcut maçları etkilenmez.',
-                    'Takım yöneticisi bilgilendirilir.',
+                    'Karar işlem kaydına yazılır.',
+                    'Takımın ilan vermesi teknik olarak ENGELLENMEZ — bunun için şemada kısıtlama alanı yok.',
+                    'Şikayet "çözüldü" olarak kapanır.',
                   ],
                   notEtiketi: 'Kısıtlama gerekçesi ve süresi',
                   notZorunlu: true,
                   notOnerileri: ['İki hafta süreyle', 'Bir ay süreyle'],
-                  uygula: (not) => {
-                    veri.ilanKisiti(acikKayit.targetId, not);
-                    veri.sikayetiCoz(acikKayit.id, 'İlan verme kısıtlandı.', not);
+                  uygula: async (not) => {
+                    await veri.ilanKisiti(acik.target_id, not);
+                    await veri.sikayetiCoz(acik.id, 'İlan verme kısıtı kaydedildi.', not);
                   },
                 }),
               },
@@ -187,16 +191,20 @@ export default function SikayetlerSayfasi() {
             sonuclar: [
               'Hedefe hiçbir yaptırım uygulanmaz.',
               'Şikayet "reddedildi" olarak kapanır.',
-              'Şikayet eden kullanıcı sonucu görür.',
+              'Gerekçe kayda geçer.',
             ],
             notEtiketi: 'Ret gerekçesi',
             notZorunlu: true,
             notOnerileri: ['Kural ihlali bulunmadı.', 'Yeterli delil yok.', 'Mükerrer şikayet.'],
-            uygula: (not) => veri.sikayetiReddet(acikKayit.id, not),
+            uygula: async (not) => {
+              await veri.sikayetiReddet(acik.id, not);
+            },
           }),
         },
       ]
     : [];
+
+  if (veri.yukleniyor && veri.sikayetler.length === 0) return <Yukleniyor />;
 
   return (
     <>
@@ -208,15 +216,17 @@ export default function SikayetlerSayfasi() {
         <Rozet ton={acikSayisi > 0 ? 'kirmizi' : 'yesil'}>{acikSayisi} açık kayıt</Rozet>
       </div>
 
+      {veri.hata && <HataKutusu hata={veri.hata} yenile={() => void veri.yenile()} />}
+
       <Rehber baslik="Nasıl çalışılır">
         Satıra tıklayınca sağda ayrıntı paneli açılır: şikayetin metni, hedefin bilgileri ve daha
         önce kaç şikayet aldığı görünür. Karar verdiğinizde alttaki eylemlerden birini seçin — her
-        biri gerekçe ister ve işlem kaydına düşer.
-        {tekrarEdenler > 0 && (
+        biri gerekçe ister, kalıcıdır ve işlem kaydına düşer.
+        {tekrarEden > 0 && (
           <>
             {' '}
-            <strong>{tekrarEdenler} kayıt</strong> daha önce şikayet almış hedeflere ait; bunlar
-            listede üstte ve kırmızı çizgiyle işaretli.
+            <strong>{tekrarEden} kayıt</strong> daha önce şikayet almış hedeflere ait; listede üstte
+            ve kırmızı çizgiyle işaretli.
           </>
         )}
       </Rehber>
@@ -235,11 +245,11 @@ export default function SikayetlerSayfasi() {
 
           <div className="alan">
             <label htmlFor="sebep">Sebep</label>
-            <select id="sebep" value={sebepSuzgeci} onChange={(e) => setSebepSuzgeci(e.target.value as never)}>
+            <select id="sebep" value={sebepSuzgeci} onChange={(e) => setSebepSuzgeci(e.target.value)}>
               <option value="hepsi">Hepsi</option>
-              {SEBEPLER.map((s) => (
+              {sebepler.map((s) => (
                 <option key={s} value={s}>
-                  {SEBEP_METNI[s]}
+                  {sebepMetni(s)}
                 </option>
               ))}
             </select>
@@ -293,53 +303,49 @@ export default function SikayetlerSayfasi() {
                 />
               )}
               {liste.map((r) => {
-                const gecmis = hedefGecmisi(r).length;
-                const oncelikli = gecmis > 1 && r.status === 'open';
+                const adet = gecmis(r).length;
+                const oncelikli = adet > 1 && r.status === 'open';
                 return (
                   <tr
                     key={r.id}
-                    className={`tiklanir${acikKayit?.id === r.id ? ' secili' : ''}${oncelikli ? ' oncelikli' : ''}`}
-                    onClick={() => setSecili(r)}
+                    className={`tiklanir${acik?.id === r.id ? ' secili' : ''}${oncelikli ? ' oncelikli' : ''}`}
+                    onClick={() => setSeciliId(r.id)}
                     tabIndex={0}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        setSecili(r);
+                        setSeciliId(r.id);
                       }
                     }}
                   >
                     <td>
-                      <strong>{tarih(r.createdAt)}</strong>
-                      <div className="silik" style={{ fontSize: 12 }}>{gecenSure(r.createdAt)}</div>
+                      <strong>{tarih(r.created_at)}</strong>
+                      <div className="silik" style={{ fontSize: 12 }}>{gecenSure(r.created_at)}</div>
                     </td>
                     <td>
                       <span className="kimlik">
-                        {r.targetType === 'team' && <Arma takim={takim(r.targetId)} boyut={30} />}
+                        {r.target_type === 'team' && <Arma takim={takim(r.target_id)} boyut={30} />}
                         <span>
                           <span className="ad">{hedefAdi(r)}</span>
                           <div className="alt">
-                            {HEDEF_METNI[r.targetType]}
-                            {gecmis > 1 && (
+                            {hedefMetni(r.target_type)}
+                            {adet > 1 && (
                               <>
                                 {' · '}
-                                <span style={{ color: 'var(--danger)', fontWeight: 700 }}>
-                                  {gecmis}. şikayet
-                                </span>
+                                <span style={{ color: 'var(--danger)', fontWeight: 700 }}>{adet}. şikayet</span>
                               </>
                             )}
                           </div>
                         </span>
                       </span>
                     </td>
-                    <td>{SEBEP_METNI[r.reason]}</td>
-                    <td>{kisi(r.reporterId)?.name ?? 'Silinmiş kullanıcı'}</td>
+                    <td>{sebepMetni(r.reason)}</td>
+                    <td>{kisi(r.reporter_id)?.name || <span className="silik">Bilinmeyen</span>}</td>
                     <td>
-                      <SikayetDurumu durum={r.status} />
+                      <SikayetRozeti durum={r.status} />
                     </td>
                     <td className="sag">
-                      <span className="satir-ok" aria-hidden="true">
-                        Aç →
-                      </span>
+                      <span className="satir-ok" aria-hidden="true">Aç →</span>
                     </td>
                   </tr>
                 );
@@ -350,23 +356,17 @@ export default function SikayetlerSayfasi() {
       </section>
 
       <YanPanel
-        acik={Boolean(acikKayit)}
-        kapat={kapat}
-        baslik={acikKayit ? SEBEP_METNI[acikKayit.reason] : ''}
-        altBaslik={acikKayit ? `${HEDEF_METNI[acikKayit.targetType]}: ${hedefAdi(acikKayit)}` : undefined}
+        acik={Boolean(acik)}
+        kapat={() => setSeciliId(null)}
+        baslik={acik ? sebepMetni(acik.reason) : ''}
+        altBaslik={acik ? `${hedefMetni(acik.target_type)}: ${hedefAdi(acik)}` : undefined}
         alt={
-          acikKayit && acikKayit.status === 'open' ? (
+          acik && acik.status === 'open' ? (
             <>
               <h4 style={{ marginBottom: 10 }}>Ne yapılsın?</h4>
               <div className="eylem-liste">
                 {eylemler.map((e) => (
-                  <Eylem
-                    key={e.ad}
-                    ad={e.ad}
-                    ne={e.ne}
-                    tehlikeli={e.tehlikeli}
-                    tikla={() => setOnay(e.istek())}
-                  />
+                  <Eylem key={e.ad} ad={e.ad} ne={e.ne} tehlikeli={e.tehlikeli} tikla={() => setOnay(e.istek())} />
                 ))}
               </div>
             </>
@@ -375,104 +375,93 @@ export default function SikayetlerSayfasi() {
           )
         }
       >
-        {acikKayit && (
+        {acik && (
           <>
-            {hedefGecmisi(acikKayit).length > 1 && (
+            {gecmis(acik).length > 1 && (
               <div className="kutu kirmizi" style={{ marginBottom: 16 }}>
                 <h4>Tekrar eden hedef</h4>
-                Bu hedef hakkında toplam {hedefGecmisi(acikKayit).length} şikayet var. Karar
-                verirken geçmişi de dikkate alın.
+                Bu hedef hakkında toplam {gecmis(acik).length} şikayet var. Karar verirken geçmişi de
+                dikkate alın.
               </div>
             )}
 
             <h4 style={{ marginBottom: 8 }}>Şikayet metni</h4>
-            <div className="kutu" style={{ marginBottom: 20 }}>
-              {acikKayit.detail}
-            </div>
+            <div className="kutu" style={{ marginBottom: 20 }}>{acik.detail}</div>
 
             <h4 style={{ marginBottom: 10 }}>Bilgiler</h4>
             <dl className="satir-liste">
-              <Satir baslik="Durum">
-                <SikayetDurumu durum={acikKayit.status} />
+              <Satir baslik="Durum"><SikayetRozeti durum={acik.status} /></Satir>
+              <Satir baslik="Bildiren">
+                {kisi(acik.reporter_id)?.name || kisi(acik.reporter_id)?.email || 'Bilinmeyen'}
               </Satir>
-              <Satir baslik="Bildiren">{kisi(acikKayit.reporterId)?.name ?? 'Silinmiş kullanıcı'}</Satir>
-              <Satir baslik="Bildirim tarihi">{tarihSaat(acikKayit.createdAt)}</Satir>
-              {acikKayit.targetType === 'listing' &&
-                (() => {
-                  const i = ilan(acikKayit.targetId);
-                  if (!i) return <Satir baslik="İlan">Kaldırılmış</Satir>;
-                  return (
-                    <>
-                      <Satir baslik="İlan">
-                        {i.pitch} · {i.district}
-                      </Satir>
-                      <Satir baslik="Maç">
-                        {i.date} {i.time} · {i.format}
-                      </Satir>
-                      <Satir baslik="İlan sahibi">{takim(i.teamId)?.name ?? '—'}</Satir>
-                    </>
-                  );
-                })()}
-              {acikKayit.targetType === 'profile' &&
-                (() => {
-                  const p = kisi(acikKayit.targetId);
-                  if (!p) return <Satir baslik="Kullanıcı">Silinmiş</Satir>;
-                  return (
-                    <>
-                      <Satir baslik="E-posta">{p.email}</Satir>
-                      <Satir baslik="Takımı">{p.teamId ? takim(p.teamId)?.name ?? '—' : 'Takımsız'}</Satir>
-                      <Satir baslik="Hesap durumu">
-                        {p.status === 'active' ? (
-                          <Rozet ton="yesil">Etkin</Rozet>
-                        ) : (
-                          <Rozet ton="kirmizi">Askıda</Rozet>
-                        )}
-                      </Satir>
-                      <Satir baslik="Kayıt tarihi">{tarih(p.createdAt)}</Satir>
-                    </>
-                  );
-                })()}
-              {acikKayit.targetType === 'team' &&
-                (() => {
-                  const t = takim(acikKayit.targetId);
-                  if (!t) return <Satir baslik="Takım">Silinmiş</Satir>;
-                  const gelmeme = veri.maclar.filter((m) => m.noShow && m.opponentId === t.id).length;
-                  return (
-                    <>
-                      <Satir baslik="Takım">
-                        <span className="kimlik">
-                          <Arma takim={t} boyut={28} />
-                          <span className="ad">{t.name}</span>
-                        </span>
-                      </Satir>
-                      <Satir baslik="İlçe">{t.district}</Satir>
-                      <Satir baslik="Seviye">{t.level}</Satir>
-                      <Satir baslik="Format">{t.format}</Satir>
-                      <Satir baslik="Gelmeme">
-                        {gelmeme > 0 ? (
-                          <Rozet ton="kirmizi">{gelmeme} bildirim</Rozet>
-                        ) : (
-                          <span className="silik">yok</span>
-                        )}
-                      </Satir>
-                    </>
-                  );
-                })()}
-              {acikKayit.resolution && <Satir baslik="Sonuç">{acikKayit.resolution}</Satir>}
-              {acikKayit.resolvedAt && <Satir baslik="Sonuçlandırma">{tarihSaat(acikKayit.resolvedAt)}</Satir>}
+              <Satir baslik="Bildirim tarihi">{tarihSaat(acik.created_at)}</Satir>
+
+              {acik.target_type === 'listing' && (() => {
+                const i = ilan(acik.target_id);
+                if (!i) return <Satir baslik="İlan">Bulunamadı</Satir>;
+                return (
+                  <>
+                    <Satir baslik="İlan">{i.pitch} · {i.district}</Satir>
+                    <Satir baslik="Maç">{i.date_text} {i.time_text} · {i.format}</Satir>
+                    <Satir baslik="Durum">
+                      {i.is_open ? <Rozet ton="yesil">Yayında</Rozet> : <Rozet>Kaldırılmış</Rozet>}
+                    </Satir>
+                    <Satir baslik="İlan sahibi">{takim(i.team_id ?? '')?.name ?? '—'}</Satir>
+                  </>
+                );
+              })()}
+
+              {acik.target_type === 'profile' && (() => {
+                const p = kisi(acik.target_id);
+                if (!p) return <Satir baslik="Kullanıcı">Bulunamadı</Satir>;
+                return (
+                  <>
+                    <Satir baslik="E-posta">{p.email ?? '—'}</Satir>
+                    <Satir baslik="Hesap durumu">
+                      {p.status === 'active' ? <Rozet ton="yesil">Etkin</Rozet> : <Rozet ton="kirmizi">Askıda</Rozet>}
+                    </Satir>
+                    <Satir baslik="Kayıt tarihi">{tarih(p.created_at)}</Satir>
+                  </>
+                );
+              })()}
+
+              {acik.target_type === 'team' && (() => {
+                const t = takim(acik.target_id);
+                if (!t) return <Satir baslik="Takım">Bulunamadı</Satir>;
+                const gelmeme = veri.degerlendirmeler.filter((d) => d.no_show && d.rated_team_id === t.id).length;
+                return (
+                  <>
+                    <Satir baslik="Takım">
+                      <span className="kimlik">
+                        <Arma takim={t} boyut={28} />
+                        <span className="ad">{t.name}</span>
+                      </span>
+                    </Satir>
+                    <Satir baslik="İlçe">{t.district}</Satir>
+                    <Satir baslik="Seviye">{t.level}</Satir>
+                    <Satir baslik="Format">{t.format}</Satir>
+                    <Satir baslik="Gelmeme">
+                      {gelmeme > 0 ? <Rozet ton="kirmizi">{gelmeme} bildirim</Rozet> : <span className="silik">yok</span>}
+                    </Satir>
+                  </>
+                );
+              })()}
+
+              {acik.resolution && <Satir baslik="Sonuç">{acik.resolution}</Satir>}
+              {acik.resolved_at && <Satir baslik="Sonuçlandırma">{tarihSaat(acik.resolved_at)}</Satir>}
             </dl>
 
             <h4 style={{ margin: '22px 0 10px' }}>Hedefin şikayet geçmişi</h4>
             <div className="kutu">
-              {hedefGecmisi(acikKayit).length === 1 ? (
+              {gecmis(acik).length === 1 ? (
                 'Bu hedef hakkındaki ilk şikayet.'
               ) : (
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {hedefGecmisi(acikKayit)
-                    .sort((a, b) => b.createdAt - a.createdAt)
+                  {gecmis(acik)
+                    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
                     .map((x) => (
                       <li key={x.id} style={{ marginBottom: 4 }}>
-                        {tarih(x.createdAt)} · {SEBEP_METNI[x.reason]} ·{' '}
+                        {tarih(x.created_at)} · {sebepMetni(x.reason)} ·{' '}
                         {x.status === 'open' ? 'açık' : x.status === 'resolved' ? 'çözüldü' : 'reddedildi'}
                       </li>
                     ))}

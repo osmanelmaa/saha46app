@@ -681,3 +681,26 @@ table.tablo tbody tr.tiklanir:hover .satir-ok { color: var(--primary-ink); }
   .sayfa-basi { align-items: flex-start; }
   .filtreler .alan { min-width: 130px; }
 }
+
+/* Canlı veri şeridi — demo şeridinin yerini aldı. */
+.demo-serit.canli {
+  background: var(--primary-soft);
+  color: var(--primary-deep);
+  border-bottom-color: var(--line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.demo-serit.canli button {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--primary-ink);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.demo-serit.canli button:hover { background: var(--surface-alt); }
+.demo-serit.canli button:disabled { opacity: 0.6; cursor: default; }

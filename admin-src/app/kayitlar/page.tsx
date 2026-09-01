@@ -3,17 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useVeri } from '@/lib/durum';
 import { gecenSure, icerir, tarihSaat } from '@/lib/bicim';
-import { BosHal, Rehber, Rozet } from '@/components/parcalar';
-
-const HEDEF_ADI: Record<string, string> = {
-  report: 'Şikayet',
-  listing: 'İlan',
-  profile: 'Kullanıcı',
-  team: 'Takım',
-  match: 'Maç',
-  tournament: 'Turnuva',
-  announcement: 'Duyuru',
-};
+import { BosHal, HataKutusu, Rehber, Rozet, Yukleniyor, hedefMetni } from '@/components/parcalar';
 
 export default function KayitlarSayfasi() {
   const veri = useVeri();
@@ -22,13 +12,15 @@ export default function KayitlarSayfasi() {
   const [hedef, setHedef] = useState('hepsi');
   const [baslangic, setBaslangic] = useState('');
 
+  const kisi = (id: string | null) => veri.profiller.find((p) => p.id === id);
+
   const islemler = useMemo(
     () => [...new Set(veri.kayitlar.map((k) => k.action))].sort((a, b) => a.localeCompare(b, 'tr')),
     [veri.kayitlar],
   );
 
   const hedefTurleri = useMemo(
-    () => [...new Set(veri.kayitlar.map((k) => k.targetType))].sort((a, b) => a.localeCompare(b, 'tr')),
+    () => [...new Set(veri.kayitlar.map((k) => k.target_type))].sort((a, b) => a.localeCompare(b, 'tr')),
     [veri.kayitlar],
   );
 
@@ -36,11 +28,12 @@ export default function KayitlarSayfasi() {
     const bas = baslangic ? Date.parse(`${baslangic}T00:00:00+03:00`) : null;
     return veri.kayitlar
       .filter((k) => (islem === 'hepsi' ? true : k.action === islem))
-      .filter((k) => (hedef === 'hepsi' ? true : k.targetType === hedef))
-      .filter((k) => (bas === null ? true : k.createdAt >= bas))
-      .filter((k) => icerir(k.action, arama) || icerir(k.note ?? '', arama) || icerir(k.targetId, arama))
-      .sort((a, b) => b.createdAt - a.createdAt);
+      .filter((k) => (hedef === 'hepsi' ? true : k.target_type === hedef))
+      .filter((k) => (bas === null ? true : Date.parse(k.created_at) >= bas))
+      .filter((k) => icerir(k.action, arama) || icerir(k.note, arama) || icerir(k.target_id, arama));
   }, [veri.kayitlar, islem, hedef, baslangic, arama]);
+
+  if (veri.yukleniyor && veri.kayitlar.length === 0) return <Yukleniyor />;
 
   return (
     <>
@@ -52,9 +45,12 @@ export default function KayitlarSayfasi() {
         <Rozet>{veri.kayitlar.length} kayıt</Rozet>
       </div>
 
+      {veri.hata && <HataKutusu hata={veri.hata} yenile={() => void veri.yenile()} />}
+
       <Rehber baslik="Bu kayıt neden önemli">
-        Askıya alma, ilan kaldırma ve hesap silme gibi işlemler geri alınamaz. Bir kararın kim
-        tarafından, ne zaman ve hangi gerekçeyle verildiği yalnızca burada görülür.
+        Askıya alma ve ilan kaldırma gibi işlemler kalıcıdır. Bir kararın kim tarafından, ne zaman
+        ve hangi gerekçeyle verildiği yalnızca burada görülür. Kayıtlar yalnızca eklenir; panelden
+        silinemez ya da düzenlenemez.
       </Rehber>
 
       <section className="kart">
@@ -75,9 +71,7 @@ export default function KayitlarSayfasi() {
             <select id="islem" value={islem} onChange={(e) => setIslem(e.target.value)}>
               <option value="hepsi">Hepsi</option>
               {islemler.map((i) => (
-                <option key={i} value={i}>
-                  {i}
-                </option>
+                <option key={i} value={i}>{i}</option>
               ))}
             </select>
           </div>
@@ -87,9 +81,7 @@ export default function KayitlarSayfasi() {
             <select id="hedef" value={hedef} onChange={(e) => setHedef(e.target.value)}>
               <option value="hepsi">Hepsi</option>
               {hedefTurleri.map((h) => (
-                <option key={h} value={h}>
-                  {HEDEF_ADI[h] ?? h}
-                </option>
+                <option key={h} value={h}>{hedefMetni(h)}</option>
               ))}
             </select>
           </div>
@@ -115,21 +107,23 @@ export default function KayitlarSayfasi() {
             </thead>
             <tbody>
               {liste.length === 0 && (
-                <BosHal baslik="Kayıt bulunamadı" aciklama="Filtreleri gevşetip tekrar deneyin." />
+                <BosHal
+                  baslik="Kayıt bulunamadı"
+                  aciklama="Henüz işlem yapılmamış ya da filtreler eşleşmiyor."
+                  sutun={5}
+                />
               )}
               {liste.map((k) => (
                 <tr key={k.id}>
                   <td>
-                    <strong>{tarihSaat(k.createdAt)}</strong>
-                    <div className="silik" style={{ fontSize: 12 }}>{gecenSure(k.createdAt)}</div>
+                    <strong>{tarihSaat(k.created_at)}</strong>
+                    <div className="silik" style={{ fontSize: 12 }}>{gecenSure(k.created_at)}</div>
                   </td>
-                  <td>{k.adminName}</td>
+                  <td>{kisi(k.admin_id)?.name || <span className="silik">—</span>}</td>
+                  <td><strong>{k.action}</strong></td>
                   <td>
-                    <strong>{k.action}</strong>
-                  </td>
-                  <td>
-                    {HEDEF_ADI[k.targetType] ?? k.targetType}
-                    <div className="silik" style={{ fontSize: 12 }}>{k.targetId}</div>
+                    {hedefMetni(k.target_type)}
+                    <div className="silik" style={{ fontSize: 12 }}>{k.target_id?.slice(0, 8) ?? '—'}</div>
                   </td>
                   <td>{k.note ?? <span className="silik">—</span>}</td>
                 </tr>

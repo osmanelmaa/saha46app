@@ -19,17 +19,20 @@ export type OnayIstegi = {
   notEtiketi?: string;
   notZorunlu?: boolean;
   notOnerileri?: string[];
-  uygula: (not: string) => void;
+  /** Kalıcı işlem; hata fırlatırsa diyalog açık kalır ve hatayı gösterir. */
+  uygula: (not: string) => void | Promise<void>;
 };
 
 export function OnayDiyalogu({ istek, kapat }: { istek: OnayIstegi | null; kapat: () => void }) {
   const [not, setNot] = useState('');
   const [hata, setHata] = useState('');
+  const [calisiyor, setCalisiyor] = useState(false);
   const ilkAlan = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setNot('');
     setHata('');
+    setCalisiyor(false);
     if (istek) {
       const zamanlayici = setTimeout(() => ilkAlan.current?.focus(), 30);
       return () => clearTimeout(zamanlayici);
@@ -39,25 +42,33 @@ export function OnayDiyalogu({ istek, kapat }: { istek: OnayIstegi | null; kapat
   useEffect(() => {
     if (!istek) return;
     const dinle = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') kapat();
+      if (e.key === 'Escape' && !calisiyor) kapat();
     };
     window.addEventListener('keydown', dinle);
     return () => window.removeEventListener('keydown', dinle);
-  }, [istek, kapat]);
+  }, [istek, kapat, calisiyor]);
 
   if (!istek) return null;
 
-  const gonder = () => {
+  const gonder = async () => {
     if (istek.notZorunlu && !not.trim()) {
       setHata('Bu işlem için gerekçe yazılmalıdır.');
       return;
     }
-    istek.uygula(not.trim());
-    kapat();
+    setCalisiyor(true);
+    setHata('');
+    try {
+      await istek.uygula(not.trim());
+      kapat();
+    } catch (e) {
+      // İşlem tamamlanmadı: diyalog açık kalsın ki kullanıcı ne olduğunu görsün.
+      setHata(e instanceof Error ? e.message : 'İşlem tamamlanamadı.');
+      setCalisiyor(false);
+    }
   };
 
   return (
-    <div className="diyalog-perde" role="presentation" onClick={kapat}>
+    <div className="diyalog-perde" role="presentation" onClick={() => { if (!calisiyor) kapat(); }}>
       <div
         className="diyalog"
         role="dialog"
@@ -109,15 +120,16 @@ export function OnayDiyalogu({ istek, kapat }: { istek: OnayIstegi | null; kapat
         </div>
 
         <div className="diyalog-butonlar">
-          <button type="button" className="btn btn-sessiz" onClick={kapat}>
+          <button type="button" className="btn btn-sessiz" onClick={kapat} disabled={calisiyor}>
             Vazgeç
           </button>
           <button
             type="button"
             className={istek.tehlikeli ? 'btn btn-tehlike' : 'btn btn-ana'}
-            onClick={gonder}
+            onClick={() => void gonder()}
+            disabled={calisiyor}
           >
-            {istek.onayMetni}
+            {calisiyor ? 'Uygulanıyor…' : istek.onayMetni}
           </button>
         </div>
       </div>

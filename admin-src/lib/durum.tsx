@@ -1,296 +1,284 @@
 'use client';
 
 /**
- * Panelin tüm durumu burada tutulur.
+ * Panelin veri durumu.
  *
- * Veri sahtedir ve yalnızca bellekte yaşar: onayla / reddet / askıya al
- * gerçekten listeleri günceller, ama sayfa yenilenince başlangıç durumuna
- * döner. Sunucu bağlandığında bu dosyadaki işlevlerin gövdesi API
- * çağrılarıyla değiştirilecek, ekranlar aynı kalacak.
+ * Veriler Supabase'ten gelir; yazma işlemleri doğrudan tabloya gider ve
+ * RLS `is_admin()` politikalarıyla korunur. Her yaptırım audit_log'a
+ * yazılır — kayıt atılamazsa işlem başarısız sayılır.
+ *
+ * İş kuralı taşıyan akışlar (teklif kabulü, maç sonucu, maç iptali) mobil
+ * uygulamadaki RPC'lerin işidir; panel onları çağırmaz.
  */
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type {
-  Announcement,
-  AuditLog,
-  Listing,
-  Match,
-  Profile,
-  Report,
-  Team,
-  Tournament,
-  TournamentApplication,
-} from './tipler';
-import { baslangicVerisi, YONETICI } from './mock/veri';
-import { BUGUN } from './mock/sabitler';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import {
+  hataMetni,
+  ilaniKapat,
+  kayitEkle,
+  kullaniciDurumunuDegistir,
+  kullaniciRolunuDegistir,
+  panelVerisiniGetir,
+  sikayetiSonuclandir,
+  type PanelVerisi,
+} from './db';
+import { profiliGetir } from './oturum';
+import type { YoneticiProfili } from './supabase';
 
-type Durum = {
-  takimlar: Team[];
-  profiller: Profile[];
-  ilanlar: Listing[];
-  maclar: Match[];
-  sikayetler: Report[];
-  turnuvalar: Tournament[];
-  basvurular: TournamentApplication[];
-  kayitlar: AuditLog[];
-  duyurular: Announcement[];
+const BOS: PanelVerisi = {
+  profiller: [],
+  takimlar: [],
+  ilanlar: [],
+  maclar: [],
+  degerlendirmeler: [],
+  sikayetler: [],
+  kayitlar: [],
+  uyeler: [],
 };
 
-type Eylemler = {
-  /** Şikayeti sonuçlandırır. */
-  sikayetiCoz: (id: string, sonuc: string, not: string) => void;
-  sikayetiReddet: (id: string, not: string) => void;
-  ilaniKaldir: (id: string, sebep: string) => void;
-  kullaniciAskiyaAl: (id: string, sebep: string) => void;
-  kullaniciAskisiniKaldir: (id: string) => void;
-  kullaniciSil: (id: string, not: string) => void;
-  uyariGonder: (hedefTur: string, hedefId: string, not: string) => void;
-  ilanKisiti: (takimId: string, not: string) => void;
-  gelmemeyiGecersizSay: (macId: string, not: string) => void;
-  basvuruKarari: (id: string, karar: 'accepted' | 'rejected', not: string) => void;
-  turnuvaEkle: (turnuva: Omit<Tournament, 'id' | 'createdAt' | 'status'>) => void;
-  duyuruGonder: (duyuru: Omit<Announcement, 'id' | 'createdAt'>) => void;
+type Baglam = PanelVerisi & {
+  yukleniyor: boolean;
+  hata: string;
+  yenile: () => Promise<void>;
+  yonetici: YoneticiProfili | null;
+
+  sikayetiCoz: (id: string, sonuc: string, not: string) => Promise<void>;
+  sikayetiReddet: (id: string, not: string) => Promise<void>;
+  ilaniKaldir: (id: string, sebep: string) => Promise<void>;
+  kullaniciAskiyaAl: (id: string, sebep: string) => Promise<void>;
+  kullaniciAskisiniKaldir: (id: string) => Promise<void>;
+  rolDegistir: (id: string, rol: 'user' | 'admin') => Promise<void>;
+  uyariGonder: (hedefTur: string, hedefId: string, not: string) => Promise<void>;
+  ilanKisiti: (takimId: string, not: string) => Promise<void>;
 };
 
-const Baglam = createContext<(Durum & Eylemler) | null>(null);
-
-let kayitSayaci = 1000;
+const VeriBaglami = createContext<Baglam | null>(null);
 
 export function VeriSaglayici({ children }: { children: ReactNode }) {
-  const [durum, setDurum] = useState<Durum>(() => ({
-    takimlar: [...baslangicVerisi.takimlar],
-    profiller: [...baslangicVerisi.profiller],
-    ilanlar: [...baslangicVerisi.ilanlar],
-    maclar: [...baslangicVerisi.maclar],
-    sikayetler: [...baslangicVerisi.sikayetler],
-    turnuvalar: [...baslangicVerisi.turnuvalar],
-    basvurular: [...baslangicVerisi.basvurular],
-    kayitlar: [...baslangicVerisi.kayitlar],
-    duyurular: [...baslangicVerisi.duyurular],
-  }));
+  const [veri, setVeri] = useState<PanelVerisi>(BOS);
+  const [yonetici, setYonetici] = useState<YoneticiProfili | null>(null);
+  const [yukleniyor, setYukleniyor] = useState(true);
+  const [hata, setHata] = useState('');
 
-  /** Her işlem, işlem kaydına bir satır düşer. */
-  const kaydet = useCallback(
-    (d: Durum, action: string, targetType: string, targetId: string, note?: string): Durum => {
-      const kayit: AuditLog = {
-        id: `l${kayitSayaci++}`,
-        adminId: YONETICI.id,
-        adminName: YONETICI.name,
-        action,
-        targetType,
-        targetId,
-        note: note || undefined,
-        // Demo verisi sabit bir "şimdi" kullanır; en üste çıkması için küçük bir ekleme.
-        createdAt: BUGUN + kayitSayaci,
-      };
-      return { ...d, kayitlar: [kayit, ...d.kayitlar] };
+  const yukle = useCallback(async () => {
+    try {
+      setHata('');
+      const profil = await profiliGetir();
+      if (!profil || profil.role !== 'admin') {
+        // Kabuk zaten giriş ekranına yönlendirir; burada veri çekmeye çalışma.
+        setVeri(BOS);
+        setYukleniyor(false);
+        return;
+      }
+      setYonetici(profil);
+      setVeri(await panelVerisiniGetir());
+    } catch (e) {
+      setHata(hataMetni(e));
+    } finally {
+      setYukleniyor(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void yukle();
+  }, [yukle]);
+
+  const yenile = useCallback(async () => {
+    setYukleniyor(true);
+    await yukle();
+  }, [yukle]);
+
+  /** Yaptırımı uygula, kaydı düş, veriyi tazele. Hata olursa yüzeye çıkar. */
+  const islem = useCallback(
+    async (
+      calistir: () => Promise<void>,
+      action: string,
+      targetType: string,
+      targetId: string | null,
+      not?: string,
+    ) => {
+      if (!yonetici) throw new Error('Yönetici oturumu bulunamadı.');
+      try {
+        await calistir();
+        await kayitEkle(yonetici.id, action, targetType, targetId, not);
+        setVeri(await panelVerisiniGetir());
+      } catch (e) {
+        const metin = hataMetni(e);
+        setHata(metin);
+        throw new Error(metin);
+      }
     },
-    [],
+    [yonetici],
   );
 
   const sikayetiCoz = useCallback(
-    (id: string, sonuc: string, not: string) => {
-      setDurum((d) => {
-        const yeni = {
-          ...d,
-          sikayetler: d.sikayetler.map((r) =>
-            r.id === id
-              ? { ...r, status: 'resolved' as const, resolvedBy: YONETICI.id, resolvedAt: BUGUN, resolution: sonuc }
-              : r,
-          ),
-        };
-        return kaydet(yeni, 'şikayet çözüldü', 'report', id, not || sonuc);
-      });
+    async (id: string, sonuc: string, not: string) => {
+      await islem(
+        async () => {
+          await sikayetiSonuclandir(id, 'resolved', sonuc, yonetici!.id);
+        },
+        'şikayet çözüldü',
+        'report',
+        id,
+        not || sonuc,
+      );
     },
-    [kaydet],
+    [islem, yonetici],
   );
 
   const sikayetiReddet = useCallback(
-    (id: string, not: string) => {
-      setDurum((d) => {
-        const yeni = {
-          ...d,
-          sikayetler: d.sikayetler.map((r) =>
-            r.id === id
-              ? { ...r, status: 'dismissed' as const, resolvedBy: YONETICI.id, resolvedAt: BUGUN, resolution: not }
-              : r,
-          ),
-        };
-        return kaydet(yeni, 'şikayet reddedildi', 'report', id, not);
-      });
+    async (id: string, not: string) => {
+      await islem(
+        async () => {
+          await sikayetiSonuclandir(id, 'dismissed', not, yonetici!.id);
+        },
+        'şikayet reddedildi',
+        'report',
+        id,
+        not,
+      );
     },
-    [kaydet],
+    [islem, yonetici],
   );
 
   const ilaniKaldir = useCallback(
-    (id: string, sebep: string) => {
-      setDurum((d) => {
-        const yeni = { ...d, ilanlar: d.ilanlar.filter((i) => i.id !== id) };
-        return kaydet(yeni, 'ilan kaldırıldı', 'listing', id, sebep);
-      });
+    async (id: string, sebep: string) => {
+      await islem(async () => { await ilaniKapat(id); }, 'ilan kaldırıldı', 'listing', id, sebep);
     },
-    [kaydet],
+    [islem],
   );
 
   const kullaniciAskiyaAl = useCallback(
-    (id: string, sebep: string) => {
-      setDurum((d) => {
-        const yeni = {
-          ...d,
-          profiller: d.profiller.map((p) =>
-            p.id === id
-              ? { ...p, status: 'suspended' as const, suspendedReason: sebep, suspendedAt: BUGUN }
-              : p,
-          ),
-        };
-        return kaydet(yeni, 'kullanıcı askıya alındı', 'profile', id, sebep);
-      });
+    async (id: string, sebep: string) => {
+      await islem(
+        async () => { await kullaniciDurumunuDegistir(id, 'suspended', sebep); },
+        'kullanıcı askıya alındı',
+        'profile',
+        id,
+        sebep,
+      );
     },
-    [kaydet],
+    [islem],
   );
 
   const kullaniciAskisiniKaldir = useCallback(
-    (id: string) => {
-      setDurum((d) => {
-        const yeni = {
-          ...d,
-          profiller: d.profiller.map((p) =>
-            p.id === id
-              ? { ...p, status: 'active' as const, suspendedReason: undefined, suspendedAt: undefined }
-              : p,
-          ),
-        };
-        return kaydet(yeni, 'kullanıcı askısı kaldırıldı', 'profile', id);
-      });
+    async (id: string) => {
+      await islem(
+        async () => { await kullaniciDurumunuDegistir(id, 'active'); },
+        'kullanıcı askısı kaldırıldı',
+        'profile',
+        id,
+      );
     },
-    [kaydet],
+    [islem],
   );
 
-  const kullaniciSil = useCallback(
-    (id: string, not: string) => {
-      setDurum((d) => {
-        const yeni = { ...d, profiller: d.profiller.filter((p) => p.id !== id) };
-        return kaydet(yeni, 'hesap silindi', 'profile', id, not || 'KVKK talebi');
-      });
+  const rolDegistir = useCallback(
+    async (id: string, rol: 'user' | 'admin') => {
+      await islem(
+        async () => { await kullaniciRolunuDegistir(id, rol); },
+        rol === 'admin' ? 'yönetici yetkisi verildi' : 'yönetici yetkisi alındı',
+        'profile',
+        id,
+      );
     },
-    [kaydet],
+    [islem],
   );
 
+  // Bildirim altyapısı panelde yok: bu iki işlem yalnızca kayda geçer.
   const uyariGonder = useCallback(
-    (hedefTur: string, hedefId: string, not: string) => {
-      setDurum((d) => kaydet(d, 'uyarı gönderildi', hedefTur, hedefId, not));
+    async (hedefTur: string, hedefId: string, not: string) => {
+      await islem(async () => {}, 'uyarı gönderildi', hedefTur, hedefId, not);
     },
-    [kaydet],
+    [islem],
   );
 
   const ilanKisiti = useCallback(
-    (takimId: string, not: string) => {
-      setDurum((d) => kaydet(d, 'ilan verme kısıtlandı', 'team', takimId, not));
+    async (takimId: string, not: string) => {
+      await islem(async () => {}, 'ilan verme kısıtlandı', 'team', takimId, not);
     },
-    [kaydet],
+    [islem],
   );
 
-  const gelmemeyiGecersizSay = useCallback(
-    (macId: string, not: string) => {
-      setDurum((d) => {
-        const yeni = {
-          ...d,
-          maclar: d.maclar.map((m) => (m.id === macId ? { ...m, noShow: false } : m)),
-        };
-        return kaydet(yeni, 'gelmeme bildirimi geçersiz sayıldı', 'match', macId, not);
-      });
-    },
-    [kaydet],
-  );
-
-  const basvuruKarari = useCallback(
-    (id: string, karar: 'accepted' | 'rejected', not: string) => {
-      setDurum((d) => {
-        const yeni = {
-          ...d,
-          basvurular: d.basvurular.map((b) => (b.id === id ? { ...b, status: karar } : b)),
-        };
-        return kaydet(
-          yeni,
-          karar === 'accepted' ? 'turnuva başvurusu onaylandı' : 'turnuva başvurusu reddedildi',
-          'tournament',
-          id,
-          not,
-        );
-      });
-    },
-    [kaydet],
-  );
-
-  const turnuvaEkle = useCallback(
-    (turnuva: Omit<Tournament, 'id' | 'createdAt' | 'status'>) => {
-      setDurum((d) => {
-        const id = `tr${d.turnuvalar.length + 1}`;
-        const yeni = {
-          ...d,
-          turnuvalar: [
-            { ...turnuva, id, status: 'draft' as const, createdAt: BUGUN + kayitSayaci },
-            ...d.turnuvalar,
-          ],
-        };
-        return kaydet(yeni, 'turnuva oluşturuldu', 'tournament', id, turnuva.name);
-      });
-    },
-    [kaydet],
-  );
-
-  const duyuruGonder = useCallback(
-    (duyuru: Omit<Announcement, 'id' | 'createdAt'>) => {
-      setDurum((d) => {
-        const id = `d${d.duyurular.length + 1}`;
-        const yeni = {
-          ...d,
-          duyurular: [{ ...duyuru, id, createdAt: BUGUN + kayitSayaci }, ...d.duyurular],
-        };
-        return kaydet(yeni, 'duyuru gönderildi', 'announcement', id, duyuru.title);
-      });
-    },
-    [kaydet],
-  );
-
-  const deger = useMemo(
+  const deger = useMemo<Baglam>(
     () => ({
-      ...durum,
+      ...veri,
+      yukleniyor,
+      hata,
+      yenile,
+      yonetici,
       sikayetiCoz,
       sikayetiReddet,
       ilaniKaldir,
       kullaniciAskiyaAl,
       kullaniciAskisiniKaldir,
-      kullaniciSil,
+      rolDegistir,
       uyariGonder,
       ilanKisiti,
-      gelmemeyiGecersizSay,
-      basvuruKarari,
-      turnuvaEkle,
-      duyuruGonder,
     }),
     [
-      durum,
+      veri,
+      yukleniyor,
+      hata,
+      yenile,
+      yonetici,
       sikayetiCoz,
       sikayetiReddet,
       ilaniKaldir,
       kullaniciAskiyaAl,
       kullaniciAskisiniKaldir,
-      kullaniciSil,
+      rolDegistir,
       uyariGonder,
       ilanKisiti,
-      gelmemeyiGecersizSay,
-      basvuruKarari,
-      turnuvaEkle,
-      duyuruGonder,
     ],
   );
 
-  return <Baglam.Provider value={deger}>{children}</Baglam.Provider>;
+  return <VeriBaglami.Provider value={deger}>{children}</VeriBaglami.Provider>;
 }
 
 export function useVeri() {
-  const deger = useContext(Baglam);
+  const deger = useContext(VeriBaglami);
   if (!deger) throw new Error('useVeri yalnızca VeriSaglayici içinde kullanılabilir.');
   return deger;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Türetilmiş yardımcılar — ekranlar bunları kullanır                         */
+/* -------------------------------------------------------------------------- */
+
+/** Sahaya gelmeme bildirimleri match_ratings.no_show üzerinden okunur. */
+export function gelmemeBildirimleri(veri: PanelVerisi) {
+  return veri.degerlendirmeler.filter((d) => d.no_show);
+}
+
+/** Bir takımın aldığı gelmeme bildirimi sayısı. */
+export function gelmemeSayisi(veri: PanelVerisi, takimId: string) {
+  return veri.degerlendirmeler.filter((d) => d.no_show && d.rated_team_id === takimId).length;
+}
+
+/** Takımın oynanmış ve onaylanmış maçları — puan bunlardan hesaplanır. */
+export function oynananMaclar(veri: PanelVerisi, takimId: string) {
+  return veri.maclar.filter(
+    (m) =>
+      m.status === 'played' &&
+      m.result_status === 'confirmed' &&
+      (m.home_team_id === takimId || m.away_team_id === takimId),
+  );
+}
+
+/** Takımın aldığı puanların ortalaması. */
+export function ortalamaPuan(veri: PanelVerisi, takimId: string): string {
+  const puanlar = veri.degerlendirmeler
+    .filter((d) => d.rated_team_id === takimId && typeof d.rating === 'number')
+    .map((d) => d.rating as number);
+  if (puanlar.length === 0) return '—';
+  return (puanlar.reduce((a, b) => a + b, 0) / puanlar.length).toFixed(1);
 }

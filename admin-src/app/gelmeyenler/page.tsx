@@ -2,33 +2,38 @@
 
 import { useMemo, useState } from 'react';
 import { useVeri } from '@/lib/durum';
-import { para } from '@/lib/bicim';
+import { para, tarih } from '@/lib/bicim';
 import { OnayDiyalogu, type OnayIstegi } from '@/components/OnayDiyalogu';
-import { Arma, Rehber, Rozet } from '@/components/parcalar';
+import { Arma, HataKutusu, Rehber, Rozet, Yukleniyor } from '@/components/parcalar';
 
 export default function GelmeyenlerSayfasi() {
   const veri = useVeri();
   const [onay, setOnay] = useState<OnayIstegi | null>(null);
   const [acikTakim, setAcikTakim] = useState<string | null>(null);
 
-  /** Bildirimler takıma göre gruplanır; asıl karar takım düzeyinde verilir. */
+  /**
+   * Bildirimler match_ratings.no_show üzerinden okunur ve bildirilen takıma
+   * göre gruplanır; karar takım düzeyinde verilir.
+   */
   const gruplar = useMemo(() => {
-    const bildirimler = veri.maclar.filter((m) => m.noShow);
+    const bildirimler = veri.degerlendirmeler.filter((d) => d.no_show);
     const harita = new Map<string, typeof bildirimler>();
-    bildirimler.forEach((m) => {
-      const mevcut = harita.get(m.opponentId) ?? [];
-      harita.set(m.opponentId, [...mevcut, m]);
+    bildirimler.forEach((d) => {
+      harita.set(d.rated_team_id, [...(harita.get(d.rated_team_id) ?? []), d]);
     });
     return [...harita.entries()]
-      .map(([takimId, maclar]) => ({
-        takim: veri.takimlar.find((t) => t.id === takimId),
+      .map(([takimId, kayitlar]) => ({
         takimId,
-        maclar: maclar.sort((a, b) => b.createdAt - a.createdAt),
+        takim: veri.takimlar.find((t) => t.id === takimId),
+        kayitlar: kayitlar.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)),
       }))
-      .sort((a, b) => b.maclar.length - a.maclar.length);
-  }, [veri.maclar, veri.takimlar]);
+      .sort((a, b) => b.kayitlar.length - a.kayitlar.length);
+  }, [veri.degerlendirmeler, veri.takimlar]);
 
-  const toplam = gruplar.reduce((t, g) => t + g.maclar.length, 0);
+  const toplam = gruplar.reduce((t, g) => t + g.kayitlar.length, 0);
+  const mac = (id: string) => veri.maclar.find((m) => m.id === id);
+
+  if (veri.yukleniyor && veri.degerlendirmeler.length === 0) return <Yukleniyor />;
 
   return (
     <>
@@ -37,21 +42,29 @@ export default function GelmeyenlerSayfasi() {
           <h1>Gelmeme bildirimleri</h1>
           <p>Sahaya gelmediği bildirilen takımlar. İki ve üzeri bildirim alanlar öne çıkarılır.</p>
         </div>
-        <Rozet ton={toplam > 0 ? 'kirmizi' : 'yesil'}>{toplam} açık bildirim</Rozet>
+        <Rozet ton={toplam > 0 ? 'kirmizi' : 'yesil'}>{toplam} bildirim</Rozet>
       </div>
 
+      {veri.hata && <HataKutusu hata={veri.hata} yenile={() => void veri.yenile()} />}
+
       <Rehber baslik="Nasıl çalışılır">
-        Bildirimler kişi kişi değil, <strong>takım takım</strong> değerlendirilir: aynı takım
-        birden fazla kez bildirilmişse yaptırım gerekir. Tek bildirim genelde uyarıyla kapatılır.
-        Bildirimin haksız olduğunu düşünüyorsanız ilgili maçta "Geçersiz say" deyin.
+        Bildirimler kişi kişi değil, <strong>takım takım</strong> değerlendirilir: aynı takım birden
+        fazla kez bildirilmişse yaptırım gerekir. Bildirimi maç sonrası rakip takım oluşturur.
       </Rehber>
+
+      <div className="kutu uyari" style={{ marginBottom: 20 }}>
+        <h4>Bildirim geçersiz sayma şu an yapılamıyor</h4>
+        <code>match_ratings</code> tablosunun yazma politikası yalnızca bildirimi oluşturan takımın
+        üyelerini kabul ediyor; <code>with check</code> koşulunda <code>is_admin()</code> yok. Haksız
+        bir bildirimi kaldırmak için mobil tarafta yeni bir migration gerekiyor.
+      </div>
 
       {gruplar.length === 0 && (
         <section className="kart">
           <div className="kart-govde">
             <div className="bos-hal">
               <div className="simge" aria-hidden="true">✓</div>
-              <strong>Açık gelmeme bildirimi yok</strong>
+              <strong>Gelmeme bildirimi yok</strong>
               <p>Bir takım sahaya gelmediğinde rakibi bildirim oluşturur ve burada listelenir.</p>
             </div>
           </div>
@@ -60,7 +73,7 @@ export default function GelmeyenlerSayfasi() {
 
       <div style={{ display: 'grid', gap: 16 }}>
         {gruplar.map((grup) => {
-          const adet = grup.maclar.length;
+          const adet = grup.kayitlar.length;
           const tekrarci = adet >= 2;
           const acik = acikTakim === grup.takimId;
 
@@ -98,54 +111,36 @@ export default function GelmeyenlerSayfasi() {
                       <tr>
                         <th>Maç tarihi</th>
                         <th>Saha</th>
-                        <th>Format</th>
+                        <th>Bildiren takım</th>
                         <th>Ücret</th>
-                        <th className="sag">İşlem</th>
+                        <th>Bildirim</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {grup.maclar.map((m) => (
-                        <tr key={m.id}>
-                          <td>
-                            <strong>{m.date}</strong>
-                            <div className="silik" style={{ fontSize: 12 }}>{m.time}</div>
-                          </td>
-                          <td>
-                            {m.pitch}
-                            <div className="silik" style={{ fontSize: 12 }}>{m.district}</div>
-                          </td>
-                          <td>{m.format}</td>
-                          <td>{para(m.fee)}</td>
-                          <td className="sag">
-                            <button
-                              type="button"
-                              className="btn btn-cizgi btn-kucuk"
-                              onClick={() =>
-                                setOnay({
-                                  baslik: 'Bildirim geçersiz sayılsın mı?',
-                                  aciklama: `${m.date} tarihli maç için verilen gelmeme bildirimi kaldırılacak ve takımın kaydından düşecek.`,
-                                  onayMetni: 'Geçersiz say',
-                        sonuclar: [
-                          'Bildirim takımın kaydından düşer.',
-                          'Takımın gelmeme sayacı bir azalır.',
-                          'İşlem kaydına gerekçesiyle yazılır.',
-                        ],
-                                  notEtiketi: 'Gerekçe',
-                                  notZorunlu: true,
-                                  notOnerileri: [
-                                    'Karşı taraf önceden haber vermiş.',
-                                    'Maç karşılıklı iptal edilmiş.',
-                                    'Hatalı bildirim.',
-                                  ],
-                                  uygula: (not) => veri.gelmemeyiGecersizSay(m.id, not),
-                                })
-                              }
-                            >
-                              Geçersiz say
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {grup.kayitlar.map((d) => {
+                        const m = mac(d.match_id);
+                        const bildiren = veri.takimlar.find((t) => t.id === d.rater_team_id);
+                        return (
+                          <tr key={`${d.match_id}-${d.rater_team_id}`}>
+                            <td>
+                              <strong>{m?.date_text ?? tarih(m?.starts_at)}</strong>
+                              <div className="silik" style={{ fontSize: 12 }}>{m?.time_text ?? '—'}</div>
+                            </td>
+                            <td>
+                              {m?.pitch ?? '—'}
+                              <div className="silik" style={{ fontSize: 12 }}>{m?.district ?? ''}</div>
+                            </td>
+                            <td>
+                              <span className="takim-hucre">
+                                <Arma takim={bildiren} boyut={26} />
+                                <span>{bildiren?.name ?? '—'}</span>
+                              </span>
+                            </td>
+                            <td>{para(m?.fee)}</td>
+                            <td>{tarih(d.created_at)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -154,57 +149,59 @@ export default function GelmeyenlerSayfasi() {
               <div className="kart-govde" style={{ borderTop: '1px solid var(--line)' }}>
                 {tekrarci && (
                   <div className="kutu kirmizi" style={{ marginBottom: 12 }}>
-                    Bu takım hakkında {adet} ayrı gelmeme bildirimi var. İlan verme kısıtı
-                    değerlendirilmelidir.
+                    Bu takım hakkında {adet} ayrı gelmeme bildirimi var. Yaptırım değerlendirilmelidir.
                   </div>
                 )}
                 <div className="btn-sira">
                   <button
                     type="button"
+                    className="btn btn-cizgi btn-kucuk"
+                    onClick={() =>
+                      setOnay({
+                        baslik: 'Uyarı kaydı oluşturulsun mu?',
+                        aciklama: `${grup.takim?.name ?? 'Takım'} için uyarı işlem kaydına yazılacak.`,
+                        onayMetni: 'Uyarı gönder',
+                        sonuclar: [
+                          'Karar işlem kaydına yazılır.',
+                          'Uygulama içi bildirim gönderilmez — bildirim altyapısı panelde yok.',
+                        ],
+                        notEtiketi: 'Uyarı gerekçesi',
+                        notZorunlu: true,
+                        notOnerileri: [
+                          'Kabul edilen maça gelmemek diğer takımları mağdur ediyor.',
+                          'Tekrarı hâlinde kısıtlama uygulanacaktır.',
+                        ],
+                        uygula: async (not) => {
+                          await veri.uyariGonder('team', grup.takimId, not);
+                        },
+                      })
+                    }
+                  >
+                    Uyarı kaydet
+                  </button>
+                  <button
+                    type="button"
                     className="btn btn-tehlike btn-kucuk"
                     onClick={() =>
                       setOnay({
-                        baslik: 'İlan vermesi kısıtlansın mı?',
-                        aciklama: `${grup.takim?.name ?? 'Takım'} belirtilen süre boyunca yeni ilan veremeyecek.`,
-                        onayMetni: 'Kısıtla',
+                        baslik: 'İlan kısıtı kaydedilsin mi?',
+                        aciklama: `${grup.takim?.name ?? 'Takım'} için kısıtlama kararı işlem kaydına yazılacak.`,
+                        onayMetni: 'Kaydet',
                         tehlikeli: true,
                         sonuclar: [
-                          'Takım yeni ilan veremez.',
-                          'Kabul edilmiş maçları etkilenmez.',
-                          'Takım yöneticisi bilgilendirilir.',
+                          'Karar işlem kaydına yazılır.',
+                          'Takımın ilan vermesi teknik olarak ENGELLENMEZ — şemada kısıtlama alanı yok.',
                         ],
                         notEtiketi: 'Kısıtlama gerekçesi ve süresi',
                         notZorunlu: true,
                         notOnerileri: ['İki hafta süreyle', 'Bir ay süreyle'],
-                        uygula: (not) => veri.ilanKisiti(grup.takimId, not),
+                        uygula: async (not) => {
+                          await veri.ilanKisiti(grup.takimId, not);
+                        },
                       })
                     }
                   >
-                    İlan vermeyi kısıtla
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-cizgi btn-kucuk"
-                    onClick={() =>
-                      setOnay({
-                        baslik: 'Uyarı gönderilsin mi?',
-                        aciklama: `${grup.takim?.name ?? 'Takım'} yöneticisine uygulama içi uyarı gönderilecek.`,
-                        onayMetni: 'Uyarı gönder',
-                        sonuclar: [
-                          'Takım yöneticisine uygulama içi bildirim gider.',
-                          'Herhangi bir kısıtlama uygulanmaz.',
-                        ],
-                        notEtiketi: 'Uyarı metni',
-                        notZorunlu: true,
-                        notOnerileri: [
-                          'Kabul edilen maça gelmemek diğer takımları mağdur ediyor.',
-                          'Tekrarı hâlinde ilan verme kısıtı uygulanacaktır.',
-                        ],
-                        uygula: (not) => veri.uyariGonder('team', grup.takimId, not),
-                      })
-                    }
-                  >
-                    Uyarı gönder
+                    İlan kısıtı kaydet
                   </button>
                 </div>
               </div>
