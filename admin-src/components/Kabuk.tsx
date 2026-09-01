@@ -9,7 +9,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useVeri } from '@/lib/durum';
-import { cikisYap, oturumEpostasi, oturumVar } from '@/lib/oturum';
+import { cikisYap, profiliGetir } from '@/lib/oturum';
+import type { YoneticiProfili } from '@/lib/supabase';
 import { Logo } from '@/components/Logo';
 
 type MenuOgesi = { yol: string; ad: string; ikon: ReactNode; sayacTuru?: 'sikayet' | 'gelmeme' };
@@ -61,21 +62,29 @@ export function Kabuk({ children }: { children: ReactNode }) {
   const router = useRouter();
   const veri = useVeri();
   const [hazir, setHazir] = useState(false);
-  const [eposta, setEposta] = useState('');
+  const [profil, setProfil] = useState<YoneticiProfili | null>(null);
 
   const girisSayfasi = yol?.startsWith('/giris') ?? false;
 
+  // Yönetici oturumu yoksa panel gösterilmez, giriş ekranına dönülür.
   useEffect(() => {
     if (girisSayfasi) {
       setHazir(true);
       return;
     }
-    if (!oturumVar()) {
-      router.replace('/giris');
-      return;
-    }
-    setEposta(oturumEpostasi());
-    setHazir(true);
+    let iptal = false;
+    profiliGetir().then((p) => {
+      if (iptal) return;
+      if (!p || p.role !== 'admin' || p.status !== 'active') {
+        router.replace('/giris');
+        return;
+      }
+      setProfil(p);
+      setHazir(true);
+    });
+    return () => {
+      iptal = true;
+    };
   }, [girisSayfasi, router]);
 
   if (girisSayfasi) return <>{children}</>;
@@ -97,7 +106,7 @@ export function Kabuk({ children }: { children: ReactNode }) {
   return (
     <>
       <div className="demo-serit" role="status">
-        Demo veri — hiçbir işlem kalıcı değil. Sayfayı yenilediğinizde başlangıç durumuna döner.
+        Demo veri — ekranlardaki kayıtlar sahtedir ve hiçbir işlem kalıcı değildir. Giriş gerçektir.
       </div>
 
       <div className="kabuk">
@@ -134,14 +143,14 @@ export function Kabuk({ children }: { children: ReactNode }) {
           ))}
 
           <div className="kenar-alt">
-            <strong>{eposta || 'yönetici'}</strong>
-            <span>Yönetici</span>
+            <strong>{profil?.name || profil?.email || 'yönetici'}</strong>
+            <span>{profil?.email ?? 'Yönetici'}</span>
             <div style={{ marginTop: 10 }}>
               <button
                 type="button"
                 className="btn btn-cizgi btn-kucuk"
-                onClick={() => {
-                  cikisYap();
+                onClick={async () => {
+                  await cikisYap();
                   router.replace('/giris');
                 }}
               >

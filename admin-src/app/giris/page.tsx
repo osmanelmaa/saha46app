@@ -1,28 +1,57 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { girisYap } from '@/lib/oturum';
+import { useEffect, useState } from 'react';
+import { girisYap, profiliGetir, yapilandirmaEksik } from '@/lib/oturum';
 import { Logo } from '@/components/Logo';
 
 /**
- * Sahte giriş ekranı.
- * Herhangi bir e-posta ve şifre panele girer; doğrulama yapılmaz.
+ * Yönetici girişi.
+ *
+ * Kimlik doğrulama gerçektir: e-posta ve şifre Supabase'e sorulur, sonra
+ * profiles tablosundaki rol denetlenir. Yalnızca yönetici hesapları girer.
  */
 export default function GirisSayfasi() {
   const router = useRouter();
   const [eposta, setEposta] = useState('');
   const [sifre, setSifre] = useState('');
   const [hata, setHata] = useState('');
+  const [gonderiliyor, setGonderiliyor] = useState(false);
+  const [denetleniyor, setDenetleniyor] = useState(true);
 
-  const gonder = (e: React.FormEvent) => {
+  // Zaten açık bir yönetici oturumu varsa doğrudan panele geç.
+  useEffect(() => {
+    let iptal = false;
+    profiliGetir().then((profil) => {
+      if (iptal) return;
+      if (profil && profil.role === 'admin' && profil.status === 'active') {
+        router.replace('/');
+      } else {
+        setDenetleniyor(false);
+      }
+    });
+    return () => {
+      iptal = true;
+    };
+  }, [router]);
+
+  const gonder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!eposta.trim() || !sifre.trim()) {
+    if (!eposta.trim() || !sifre) {
       setHata('E-posta ve şifre alanlarını doldurun.');
       return;
     }
-    girisYap(eposta.trim());
-    router.replace('/');
+
+    setGonderiliyor(true);
+    setHata('');
+    const sonuc = await girisYap(eposta.trim(), sifre);
+    if (sonuc.ok) {
+      router.replace('/');
+      return;
+    }
+    setHata(sonuc.hata);
+    setSifre('');
+    setGonderiliyor(false);
   };
 
   return (
@@ -34,9 +63,16 @@ export default function GirisSayfasi() {
           Moderasyon ve yönetim paneline giriş yapın.
         </p>
 
+        {yapilandirmaEksik && (
+          <div className="kutu kirmizi" style={{ marginTop: 16 }}>
+            <strong>Panel yapılandırılmamış.</strong> Supabase bağlantı bilgileri
+            derleme sırasında tanımlanmamış; giriş yapılamaz.
+          </div>
+        )}
+
         <div className="kutu uyari" style={{ marginTop: 16 }}>
-          <strong>Demo panel.</strong> Kimlik doğrulama yoktur; herhangi bir e-posta ve şifre
-          ile giriş yapılır. Görülen tüm veriler sahtedir.
+          Panelde görünen <strong>veriler demodur</strong>. Giriş gerçektir:
+          yalnızca yönetici hesapları kabul edilir.
         </div>
 
         <form onSubmit={gonder}>
@@ -52,6 +88,7 @@ export default function GirisSayfasi() {
               }}
               placeholder="ornek@saha46.app"
               autoComplete="username"
+              disabled={gonderiliyor || denetleniyor}
             />
           </div>
 
@@ -66,19 +103,30 @@ export default function GirisSayfasi() {
                 setHata('');
               }}
               autoComplete="current-password"
+              disabled={gonderiliyor || denetleniyor}
             />
           </div>
 
           {hata && (
-            <p className="ipucu" style={{ color: 'var(--danger)' }}>
+            <p className="ipucu" style={{ color: 'var(--danger)' }} role="alert">
               {hata}
             </p>
           )}
 
-          <button type="submit" className="btn btn-ana" style={{ width: '100%' }}>
-            Panele gir
+          <button
+            type="submit"
+            className="btn btn-ana"
+            style={{ width: '100%' }}
+            disabled={gonderiliyor || denetleniyor || yapilandirmaEksik}
+          >
+            {denetleniyor ? 'Denetleniyor…' : gonderiliyor ? 'Giriş yapılıyor…' : 'Panele gir'}
           </button>
         </form>
+
+        <p className="ipucu" style={{ marginTop: 16 }}>
+          Şifrenizi mi unuttunuz? Sıfırlama bağlantısı mobil uygulamanın giriş
+          ekranından istenebilir.
+        </p>
       </div>
     </div>
   );

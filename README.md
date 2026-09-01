@@ -181,17 +181,50 @@ saf marka renkleri beyaz üzerinde 4.5:1 kontrastı tutturmaz.
 Kaynak: `admin-src/` (Next.js 16 App Router + TypeScript).
 Yayınlanan çıktı: `admin/` (statik HTML, elle düzenlenmez).
 
-**Panel tamamen sahte veriyle çalışır.** Sunucu, veritabanı ve gerçek kimlik
-doğrulama yoktur. Giriş ekranı herhangi bir e-posta ve şifreyi kabul eder.
+**Ekranlardaki veriler sahtedir, giriş gerçektir.** Kimlik doğrulama
+Supabase üzerinden yapılır; ekranlarda görünen kayıtlar hâlâ
+`lib/mock/veri.ts` içinden gelir.
 Onayla / reddet / askıya al işlemleri listeleri gerçekten günceller, ancak
 yalnızca bellekte: sayfa yenilenince başlangıç durumuna döner. Her sayfanın
 üstünde bunu söyleyen kalıcı bir şerit vardır.
+
+### Yönetici girişi
+
+Giriş Supabase e-posta/şifre ile yapılır ([`lib/oturum.ts`](admin-src/lib/oturum.ts)).
+Girişten sonra `profiles` tablosundan rol okunur; panele yalnızca
+`role = 'admin'` **ve** `status = 'active'` olan hesaplar alınır. Bu, veritabanındaki
+`is_admin()` yardımcısının baktığı alanın aynısıdır — panel kendi yetki kuralını
+uydurmaz.
+
+Bir hesabı yönetici yapmak için (Supabase → SQL Editor; veri güncellemesidir,
+şema değişikliği değil):
+
+    update profiles set role = 'admin' where email = 'ornek@saha46.app';
+
+Bağlantı bilgileri `admin-src/.env.local` dosyasından okunur ve depoya
+girmez:
+
+    NEXT_PUBLIC_SUPABASE_URL=...
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+
+Değerler mobil depodaki `eas.json` içindeki `EXPO_PUBLIC_*` karşılıklarıdır.
+Yalnızca **anon public** anahtar kullanılır; tarayıcıya gömülmesi tasarım
+gereğidir ve RLS tarafından korunur. `service_role` anahtarı panele asla
+konmaz — RLS'i tamamen atlar.
+
+Panel statik dışa aktarıldığı için bu değerler **derleme sırasında** gömülür:
+`.env.local` dosyası olmadan `npm run yayinla` çalıştırılırsa giriş ekranı
+"Panel yapılandırılmamış" uyarısı verir.
+
+Arayüzdeki denetim yalnızca ekranı gizler; asıl koruma RLS'tedir. Panelin bir
+şeyi görememesi politikayı gevşetmek için gerekçe değildir — önce
+`is_admin()`'in o hesap için doğru döndüğü kontrol edilmelidir.
 
 ### Ekranlar
 
 | Yol | İşlev |
 | --- | --- |
-| `/admin/giris` | Sahte giriş |
+| `/admin/giris` | Yönetici girişi (Supabase, gerçek) |
 | `/admin` | Özet — 4 sayı kartı, bekleyen şikayetler, son işlemler |
 | `/admin/sikayetler` | Ana iş kuyruğu: filtre, yan panel, hedef geçmişi, aksiyonlar |
 | `/admin/gelmeyenler` | Takıma göre gruplanmış gelmeme bildirimleri |
