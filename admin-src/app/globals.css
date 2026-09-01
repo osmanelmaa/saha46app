@@ -704,3 +704,86 @@ table.tablo tbody tr.tiklanir:hover .satir-ok { color: var(--primary-ink); }
 }
 .demo-serit.canli button:hover { background: var(--surface-alt); }
 .demo-serit.canli button:disabled { opacity: 0.6; cursor: default; }
+
+/* ==========================================================================
+   Telefon (640px altı)
+   Tablolar yatay kaydırma yerine kart listesine dönüşür: her satır bir kart,
+   her hücre "etiket: değer" biçiminde. Etiketler td'lerdeki data-etiket
+   özniteliğinden gelir.
+   ========================================================================== */
+@media (max-width: 640px) {
+  .icerik { padding: 16px 12px 40px; }
+
+  /* Şerit iki satıra sarsın, düğme sıkışmasın. */
+  .demo-serit.canli { flex-direction: column; gap: 8px; padding: 10px 14px; line-height: 1.4; }
+
+  /* Kenar menüsü tek sütun. */
+  .kenar { padding: 12px; }
+  .kenar nav { grid-template-columns: 1fr; }
+
+  h1 { font-size: 21px; }
+  .sayfa-basi { margin-bottom: 16px; }
+
+  /* --- Tablo → kart listesi --- */
+  .tablo-sarmal { overflow-x: visible; }
+  table.tablo { min-width: 0; display: block; }
+  table.tablo thead { display: none; }
+  table.tablo tbody { display: block; }
+
+  table.tablo tbody tr {
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: var(--r-14);
+    padding: 4px 14px;
+    margin: 12px;
+  }
+  table.tablo tbody tr.secili { background: var(--primary-soft); }
+  table.tablo tbody tr.oncelikli { border-left: 3px solid var(--danger); }
+  table.tablo tbody tr.tiklanir:hover td { background: transparent; }
+
+  /* Hücre bir blok: sütun adı üstte, değer altında. Hücre içinde birden
+     fazla öğe olabildiği için flex değil blok düzen kullanılır. */
+  table.tablo td {
+    display: block;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+  table.tablo tbody tr td:last-child { border-bottom: 0; }
+
+  table.tablo td::before {
+    content: attr(data-etiket);
+    display: block;
+    margin-bottom: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  /* Etiketi olmayan hücrede boş satır bırakma. */
+  table.tablo td:not([data-etiket])::before { display: none; }
+  .sag { text-align: left; }
+
+  /* Boş durum satırı kart olmasın. */
+  table.tablo tbody tr:has(td[colspan]) { border: 0; padding: 0; margin: 0; }
+  table.tablo td[colspan] { display: block; padding: 0; border: 0; }
+  table.tablo td[colspan]::before { content: none; }
+
+  /* --- Yan panel ve diyalog --- */
+  .satir { grid-template-columns: 1fr; gap: 2px; }
+  .satir dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .yan-panel-govde { padding: 16px; }
+  .yan-panel-basi { padding: 14px 16px; }
+  .yan-panel-alt { padding: 14px 16px; }
+  .diyalog { padding: 18px; }
+
+  /* --- Filtreler tam genişlik --- */
+  .filtreler { padding: 12px 14px; gap: 8px; }
+  .filtreler .alan { min-width: 100%; }
+  .filtre-ozet { margin-left: 0; }
+
+  /* --- Kart başlıkları --- */
+  .kart-basi { flex-wrap: wrap; }
+  .sayi-kart .deger { font-size: 28px; }
+}

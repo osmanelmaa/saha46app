@@ -115,17 +115,17 @@ export default function KayitlarSayfasi() {
               )}
               {liste.map((k) => (
                 <tr key={k.id}>
-                  <td>
+                  <td data-etiket="Tarih">
                     <strong>{tarihSaat(k.created_at)}</strong>
                     <div className="silik" style={{ fontSize: 12 }}>{gecenSure(k.created_at)}</div>
                   </td>
-                  <td>{kisi(k.admin_id)?.name || <span className="silik">—</span>}</td>
-                  <td><strong>{k.action}</strong></td>
-                  <td>
+                  <td data-etiket="Yönetici">{kisi(k.admin_id)?.name || <span className="silik">—</span>}</td>
+                  <td data-etiket="İşlem"><strong>{k.action}</strong></td>
+                  <td data-etiket="Hedef">
                     {hedefMetni(k.target_type)}
                     <div className="silik" style={{ fontSize: 12 }}>{k.target_id?.slice(0, 8) ?? '—'}</div>
                   </td>
-                  <td>{k.note ?? <span className="silik">—</span>}</td>
+                  <td data-etiket="Not">{k.note ?? <span className="silik">—</span>}</td>
                 </tr>
               ))}
             </tbody>

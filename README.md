@@ -188,6 +188,20 @@ Onayla / reddet / askıya al işlemleri listeleri gerçekten günceller, ancak
 yalnızca bellekte: sayfa yenilenince başlangıç durumuna döner. Her sayfanın
 üstünde bunu söyleyen kalıcı bir şerit vardır.
 
+### Duyarlılık
+
+| Genişlik | Düzen |
+| --- | --- |
+| 1100px+ | Sol kenar menüsü, özet iki sütun |
+| 960–1100px | Sol kenar menüsü, özet tek sütun |
+| 640–960px | Kenar menüsü yatay şeride döner, filtreler sarar |
+| 640px altı | Tablolar kart listesine döner, tek sütun |
+
+Telefonda tablolar yatay kaydırma yerine kart listesi olur: her satır bir
+kart, her hücre "sütun adı + değer" biçiminde. Sütun adı `<td>` üzerindeki
+`data-etiket` özniteliğinden okunur — tabloya sütun eklerken bu özniteliği
+de eklemek gerekir, yoksa telefonda o alanın başlığı görünmez.
+
 ### Yönetici girişi
 
 Giriş Supabase e-posta/şifre ile yapılır ([`lib/oturum.ts`](admin-src/lib/oturum.ts)).

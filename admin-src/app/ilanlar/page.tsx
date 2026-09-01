@@ -175,7 +175,7 @@ export default function IlanlarSayfasi() {
                 const t = takim(i.team_id);
                 return (
                   <tr key={i.id}>
-                    <td>
+                    <td data-etiket="İlan">
                       <strong>{i.kind === 'kiralik' ? i.player_name ?? 'Kiralık oyuncu' : i.pitch}</strong>
                       <div className="silik" style={{ fontSize: 12 }}>
                         {i.district}
@@ -185,13 +185,13 @@ export default function IlanlarSayfasi() {
                         {!i.is_open && <> · <span style={{ fontWeight: 700 }}>kaldırılmış</span></>}
                       </div>
                     </td>
-                    <td>
+                    <td data-etiket="Tür">
                       <IlanTuruRozeti tur={i.kind} />
                       {i.positions && i.positions.length > 0 && (
                         <div className="silik" style={{ fontSize: 12, marginTop: 4 }}>{i.positions.join(', ')}</div>
                       )}
                     </td>
-                    <td>
+                    <td data-etiket="Takım / kişi">
                       {i.kind === 'kiralik' ? (
                         <>
                           <strong>{i.player_name ?? '—'}</strong>
@@ -207,16 +207,16 @@ export default function IlanlarSayfasi() {
                         </span>
                       )}
                     </td>
-                    <td>
+                    <td data-etiket="Maç">
                       {i.date_text}
                       <div className="silik" style={{ fontSize: 12 }}>{i.time_text} · {i.format}</div>
                     </td>
-                    <td>{i.fee > 0 ? para(i.fee) : <span className="silik">—</span>}</td>
-                    <td>
+                    <td data-etiket="Ücret">{i.fee > 0 ? para(i.fee) : <span className="silik">—</span>}</td>
+                    <td data-etiket="Yayın">
                       {tarih(i.created_at)}
                       <div className="silik" style={{ fontSize: 12 }}>{gecenSure(i.created_at)}</div>
                     </td>
-                    <td className="sag">
+                    <td className="sag" data-etiket="İşlem">
                       {i.is_open ? (
                         <button
                           type="button"

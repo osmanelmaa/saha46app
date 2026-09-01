@@ -169,15 +169,15 @@ export default function KullanicilarSayfasi() {
                       }
                     }}
                   >
-                    <td>
+                    <td data-etiket="Ad">
                       <strong>{p.name || '(isimsiz)'}</strong>
                       {p.role === 'admin' && (
                         <div style={{ marginTop: 4 }}><Rozet ton="dolu">Yönetici</Rozet></div>
                       )}
                     </td>
-                    <td>{p.email ?? <span className="silik">—</span>}</td>
-                    <td>{kullanicininTakimi(p.id)?.name ?? <span className="silik">Takımsız</span>}</td>
-                    <td>
+                    <td data-etiket="E-posta">{p.email ?? <span className="silik">—</span>}</td>
+                    <td data-etiket="Takım">{kullanicininTakimi(p.id)?.name ?? <span className="silik">Takımsız</span>}</td>
+                    <td data-etiket="Durum">
                       {p.status === 'active' ? (
                         <Rozet ton="yesil">Etkin</Rozet>
                       ) : (
@@ -189,8 +189,8 @@ export default function KullanicilarSayfasi() {
                         </>
                       )}
                     </td>
-                    <td>{tarih(p.created_at)}</td>
-                    <td className="sag"><span className="satir-ok" aria-hidden="true">Aç →</span></td>
+                    <td data-etiket="Kayıt tarihi">{tarih(p.created_at)}</td>
+                    <td className="sag" data-etiket="Ayrıntı"><span className="satir-ok" aria-hidden="true">Aç →</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -225,7 +225,7 @@ export default function KullanicilarSayfasi() {
                       }
                     }}
                   >
-                    <td>
+                    <td data-etiket="Takım">
                       <span className="takim-hucre">
                         <Arma takim={s.takim} />
                         <span>
@@ -234,12 +234,12 @@ export default function KullanicilarSayfasi() {
                         </span>
                       </span>
                     </td>
-                    <td>{s.takim.district}</td>
-                    <td>{s.takim.level}</td>
-                    <td>{s.uye}</td>
-                    <td>{s.oynanan}</td>
-                    <td>{s.ortalama}</td>
-                    <td className="sag">
+                    <td data-etiket="İlçe">{s.takim.district}</td>
+                    <td data-etiket="Seviye">{s.takim.level}</td>
+                    <td data-etiket="Üye">{s.uye}</td>
+                    <td data-etiket="Oynanan">{s.oynanan}</td>
+                    <td data-etiket="Puan">{s.ortalama}</td>
+                    <td className="sag" data-etiket="Uyarılar">
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                         {s.gelmeme > 0 && <Rozet ton="kirmizi">{s.gelmeme} gelmeme</Rozet>}
                         {s.sikayet > 0 && <Rozet ton="uyari">{s.sikayet} şikayet</Rozet>}

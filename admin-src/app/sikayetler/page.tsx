@@ -318,11 +318,11 @@ export default function SikayetlerSayfasi() {
                       }
                     }}
                   >
-                    <td>
+                    <td data-etiket="Tarih">
                       <strong>{tarih(r.created_at)}</strong>
                       <div className="silik" style={{ fontSize: 12 }}>{gecenSure(r.created_at)}</div>
                     </td>
-                    <td>
+                    <td data-etiket="Hedef">
                       <span className="kimlik">
                         {r.target_type === 'team' && <Arma takim={takim(r.target_id)} boyut={30} />}
                         <span>
@@ -339,12 +339,12 @@ export default function SikayetlerSayfasi() {
                         </span>
                       </span>
                     </td>
-                    <td>{sebepMetni(r.reason)}</td>
-                    <td>{kisi(r.reporter_id)?.name || <span className="silik">Bilinmeyen</span>}</td>
-                    <td>
+                    <td data-etiket="Sebep">{sebepMetni(r.reason)}</td>
+                    <td data-etiket="Şikayet eden">{kisi(r.reporter_id)?.name || <span className="silik">Bilinmeyen</span>}</td>
+                    <td data-etiket="Durum">
                       <SikayetRozeti durum={r.status} />
                     </td>
-                    <td className="sag">
+                    <td className="sag" data-etiket="Ayrıntı">
                       <span className="satir-ok" aria-hidden="true">Aç →</span>
                     </td>
                   </tr>

@@ -122,22 +122,22 @@ export default function GelmeyenlerSayfasi() {
                         const bildiren = veri.takimlar.find((t) => t.id === d.rater_team_id);
                         return (
                           <tr key={`${d.match_id}-${d.rater_team_id}`}>
-                            <td>
+                            <td data-etiket="Maç tarihi">
                               <strong>{m?.date_text ?? tarih(m?.starts_at)}</strong>
                               <div className="silik" style={{ fontSize: 12 }}>{m?.time_text ?? '—'}</div>
                             </td>
-                            <td>
+                            <td data-etiket="Saha">
                               {m?.pitch ?? '—'}
                               <div className="silik" style={{ fontSize: 12 }}>{m?.district ?? ''}</div>
                             </td>
-                            <td>
+                            <td data-etiket="Bildiren takım">
                               <span className="takim-hucre">
                                 <Arma takim={bildiren} boyut={26} />
                                 <span>{bildiren?.name ?? '—'}</span>
                               </span>
                             </td>
-                            <td>{para(m?.fee)}</td>
-                            <td>{tarih(d.created_at)}</td>
+                            <td data-etiket="Ücret">{para(m?.fee)}</td>
+                            <td data-etiket="Bildirim">{tarih(d.created_at)}</td>
                           </tr>
                         );
                       })}
