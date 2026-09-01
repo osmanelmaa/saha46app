@@ -1,8 +1,8 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/davet/:kod", "destination": "/davet/index.html" },
-    { "source": "/davet/:kod/", "destination": "/davet/index.html" }
+    { "source": "/davet/:kod", "destination": "/davet/" },
+    { "source": "/davet/:kod/", "destination": "/davet/" }
   ],
   "headers": [
     {

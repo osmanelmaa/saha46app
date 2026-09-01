@@ -15,8 +15,11 @@
 
   KURULUM
   - Kod adresten okunur. Yol biçimi (/davet/MS-4A43) için sunucu
-    yönlendirmesi gerekir: vercel.json içindeki rewrites ve _redirects
-    bunu yapar, ikisi de /davet/index.html dosyasına düşürür.
+    yönlendirmesi gerekir: Vercel'de vercel.json rewrites, Cloudflare'de
+    _redirects bunu yapar.
+  - Vercel'de rewrite hedefi ".html" ile BİTMEMELİ. cleanUrls açık olduğu
+    için /davet/index.html adresi 308 ile yönlendiriliyor ve rewrite
+    zinciri kırılıp 404 veriyor; hedef /davet/ olmalı.
   - Sorgu biçimi (/davet/?kod=MS-4A43) yönlendirme olmadan da çalışır.
 
   DEĞİŞTİRİRKEN DİKKAT
@@ -222,9 +225,10 @@
 
       magazalariDoldur();
 
-      // TODO: Mağaza bağlantıları yayına çıkınca doldurulacak.
+      // App Store kimliği: App Store Connect → App Information → Apple ID.
+      // Google Play adresi uygulama yayınlanınca doğrulanmalı.
       function magazalariDoldur() {
-        document.getElementById('ios').href = 'https://apps.apple.com/tr/app/saha46/id000000000';
+        document.getElementById('ios').href = 'https://apps.apple.com/tr/app/saha46/id6806569848';
         document.getElementById('android').href =
           'https://play.google.com/store/apps/details?id=com.saha46.app';
       }
