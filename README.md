@@ -28,10 +28,12 @@ derleme adımı yok, JavaScript yalnızca davet sayfasında.
    projesi kurulunca gerçek bölge adı yazılmalı (App Store'a çıkmadan
    önce zorunlu). Bölge Türkiye dışındaysa aynı sayfadaki yurt dışına
    aktarım uyarısı geçerlidir.
-3. **Mağaza bağlantıları** — üç yerde yer tutucu duruyor, hepsi `TODO`
-   ile işaretli: ana sayfadaki iki `store-btn` (şimdilik tıklanamaz,
-   "Yakında" rozetli), `davet/index.html` ve `giris-tamam.html`
-   dosyalarının sonundaki App Store / Google Play adresleri.
+3. **Google Play bağlantısı** — App Store yayında ve bağlantısı üç yerde de
+   gerçek (`id6806569848`): ana sayfadaki buton, `davet/index.html` ve
+   `giris-tamam.html`. Google Play hâlâ yer tutucu: ana sayfadaki düğme
+   "Yakında" rozetiyle duruyor, iki köprü sayfasında da tahmini paket adı
+   (`com.saha46.app`) yazılı. Uygulama Play'de yayınlanınca üçü birden
+   güncellenmeli.
 
 4. ~~Ekran görüntüleri~~ — eklendi: `assets/ilanlar.jpeg`,
    `teklifler.jpeg`, `dizilis.jpeg`, `turnuvalar.jpeg` (~1000×2048).
