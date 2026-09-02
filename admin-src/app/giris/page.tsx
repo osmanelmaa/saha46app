@@ -70,11 +70,6 @@ export default function GirisSayfasi() {
           </div>
         )}
 
-        <div className="kutu uyari" style={{ marginTop: 16 }}>
-          Panelde görünen <strong>veriler demodur</strong>. Giriş gerçektir:
-          yalnızca yönetici hesapları kabul edilir.
-        </div>
-
         <form onSubmit={gonder}>
           <div className="alan">
             <label htmlFor="eposta">E-posta</label>
@@ -122,11 +117,6 @@ export default function GirisSayfasi() {
             {denetleniyor ? 'Denetleniyor…' : gonderiliyor ? 'Giriş yapılıyor…' : 'Panele gir'}
           </button>
         </form>
-
-        <p className="ipucu" style={{ marginTop: 16 }}>
-          Şifrenizi mi unuttunuz? Sıfırlama bağlantısı mobil uygulamanın giriş
-          ekranından istenebilir.
-        </p>
       </div>
     </div>
   );
