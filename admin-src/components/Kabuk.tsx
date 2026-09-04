@@ -44,6 +44,7 @@ const MENU: { baslik: string; ogeler: MenuOgesi[] }[] = [
     baslik: 'İçerik',
     ogeler: [
       { yol: '/ilanlar', ad: 'İlanlar', ikon: ikon('M4 6h16M4 12h16M4 18h10') },
+      { yol: '/maclar', ad: 'Maçlar', ikon: ikon('M12 3a9 9 0 100 18 9 9 0 000-18zM12 3v4M12 17v4M3 12h4M17 12h4M8 8l3 3M16 8l-3 3M8 16l3-3M16 16l-3-3') },
       { yol: '/kullanicilar', ad: 'Kullanıcılar ve takımlar', ikon: ikon('M16 20v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M9.5 10.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM21 20v-2a4 4 0 00-3-3.9') },
     ],
   },

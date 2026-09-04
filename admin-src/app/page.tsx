@@ -50,6 +50,13 @@ export default function OzetSayfasi() {
   const sonKayitlar = veri.kayitlar.slice(0, 8);
   const bekleyenIs = acikSikayetler.length + acikGelmeme.length;
 
+  // Gelmeme bildirimi olan ya da sonucu çekişmeli maçlar.
+  const sorunluMac = veri.maclar.filter(
+    (m) =>
+      m.result_status === 'disputed' ||
+      veri.degerlendirmeler.some((d) => d.match_id === m.id && d.no_show),
+  ).length;
+
   if (veri.yukleniyor && veri.profiller.length === 0) {
     return <Yukleniyor />;
   }
@@ -107,6 +114,14 @@ export default function OzetSayfasi() {
           gitMetni="İlanları aç"
         />
         <SayiKart baslik="Haftalık eşleşen maç" deger={haftalikMac.length} alt="Son 7 günde kesinleşti" />
+        <SayiKart
+          baslik="Sorunlu maç"
+          deger={sorunluMac}
+          alt="Gelmeme bildirimi ya da çekişmeli sonuç"
+          ton={sorunluMac > 0 ? 'vurgu' : 'iyi'}
+          git="/maclar"
+          gitMetni="Maçları aç"
+        />
       </div>
 
       <div className="ikili">

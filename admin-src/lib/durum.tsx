@@ -28,6 +28,7 @@ import {
   kullaniciRolunuDegistir,
   panelVerisiniGetir,
   sikayetiSonuclandir,
+  takimiSil,
   type PanelVerisi,
 } from './db';
 import { profiliGetir } from './oturum';
@@ -57,6 +58,7 @@ type Baglam = PanelVerisi & {
   kullaniciAskisiniKaldir: (id: string) => Promise<void>;
   rolDegistir: (id: string, rol: 'user' | 'admin') => Promise<void>;
   uyariGonder: (hedefTur: string, hedefId: string, not: string) => Promise<void>;
+  takimSil: (id: string, not: string) => Promise<void>;
   ilanKisiti: (takimId: string, not: string) => Promise<void>;
 };
 
@@ -193,6 +195,13 @@ export function VeriSaglayici({ children }: { children: ReactNode }) {
     [islem],
   );
 
+  const takimSil = useCallback(
+    async (id: string, not: string) => {
+      await islem(async () => { await takimiSil(id); }, 'takım silindi', 'team', id, not);
+    },
+    [islem],
+  );
+
   // Bildirim altyapısı panelde yok: bu iki işlem yalnızca kayda geçer.
   const uyariGonder = useCallback(
     async (hedefTur: string, hedefId: string, not: string) => {
@@ -223,6 +232,7 @@ export function VeriSaglayici({ children }: { children: ReactNode }) {
       rolDegistir,
       uyariGonder,
       ilanKisiti,
+      takimSil,
     }),
     [
       veri,
@@ -238,6 +248,7 @@ export function VeriSaglayici({ children }: { children: ReactNode }) {
       rolDegistir,
       uyariGonder,
       ilanKisiti,
+      takimSil,
     ],
   );
 
@@ -281,4 +292,23 @@ export function ortalamaPuan(veri: PanelVerisi, takimId: string): string {
     .map((d) => d.rating as number);
   if (puanlar.length === 0) return '—';
   return (puanlar.reduce((a, b) => a + b, 0) / puanlar.length).toFixed(1);
+}
+
+/** Takım silinirse birlikte gidecek kayıtların sayısı (cascade). */
+export function silmeEtkisi(veri: PanelVerisi, takimId: string) {
+  const maclar = veri.maclar.filter(
+    (m) => m.home_team_id === takimId || m.away_team_id === takimId,
+  );
+  return {
+    uye: veri.uyeler.filter((u) => u.team_id === takimId).length,
+    ilan: veri.ilanlar.filter((i) => i.team_id === takimId).length,
+    mac: maclar.length,
+    // Rakip takımların geçmişini de etkileyen maçlar.
+    rakipEtkilenen: new Set(
+      maclar.map((m) => (m.home_team_id === takimId ? m.away_team_id : m.home_team_id)),
+    ).size,
+    degerlendirme: veri.degerlendirmeler.filter(
+      (d) => d.rater_team_id === takimId || d.rated_team_id === takimId,
+    ).length,
+  };
 }

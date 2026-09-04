@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { gelmemeSayisi, oynananMaclar, ortalamaPuan, useVeri } from '@/lib/durum';
+import { gelmemeSayisi, oynananMaclar, ortalamaPuan, silmeEtkisi, useVeri } from '@/lib/durum';
 import { icerir, tarih, tarihSaat } from '@/lib/bicim';
 import { OnayDiyalogu, type OnayIstegi } from '@/components/OnayDiyalogu';
 import { Satir, YanPanel } from '@/components/YanPanel';
 import {
   Arma,
+  Avatar,
   BosHal,
   Eylem,
   HataKutusu,
@@ -170,10 +171,15 @@ export default function KullanicilarSayfasi() {
                     }}
                   >
                     <td data-etiket="Ad">
-                      <strong>{p.name || '(isimsiz)'}</strong>
-                      {p.role === 'admin' && (
-                        <div style={{ marginTop: 4 }}><Rozet ton="dolu">Yönetici</Rozet></div>
-                      )}
+                      <span className="kimlik">
+                        <Avatar ad={p.name} url={p.avatar_url} boyut={30} />
+                        <span>
+                          <span className="ad">{p.name || '(isimsiz)'}</span>
+                          {p.role === 'admin' && (
+                            <div className="alt"><Rozet ton="dolu">Yönetici</Rozet></div>
+                          )}
+                        </span>
+                      </span>
                     </td>
                     <td data-etiket="E-posta">{p.email ?? <span className="silik">—</span>}</td>
                     <td data-etiket="Takım">{kullanicininTakimi(p.id)?.name ?? <span className="silik">Takımsız</span>}</td>
@@ -405,6 +411,38 @@ export default function KullanicilarSayfasi() {
                   })
                 }
               />
+
+              <Eylem
+                ad="Takımı sil"
+                ne="Geri alınamaz. Maç kayıtları ve değerlendirmeler de silinir."
+                tehlikeli
+                tikla={() => {
+                  const etki = silmeEtkisi(veri, seciliTakim.id);
+                  setOnay({
+                    baslik: 'Takım kalıcı olarak silinsin mi?',
+                    aciklama: `${seciliTakim.name} ve ona bağlı tüm kayıtlar veritabanından silinecek. Bu işlem geri alınamaz.`,
+                    onayMetni: 'Takımı sil',
+                    tehlikeli: true,
+                    sonuclar: [
+                      `${etki.uye} üyelik kaydı silinir.`,
+                      `${etki.ilan} ilan silinir.`,
+                      `${etki.mac} maç kaydı silinir.`,
+                      `${etki.degerlendirme} değerlendirme ve gelmeme bildirimi silinir.`,
+                      etki.rakipEtkilenen > 0
+                        ? `${etki.rakipEtkilenen} rakip takımın maç geçmişi de eksilir; oynanan maç sayıları ve ortalama puanları değişir.`
+                        : 'Başka takımın geçmişi etkilenmez.',
+                      'Takımın üyeleri silinmez, yalnızca takımla bağları kopar.',
+                    ],
+                    notEtiketi: 'Silme gerekçesi',
+                    notZorunlu: true,
+                    notOnerileri: ['Sahte takım', 'Yinelenen kayıt', 'Kullanıcı talebi'],
+                    uygula: async (not) => {
+                      await veri.takimSil(seciliTakim.id, `${seciliTakim.name} — ${not}`);
+                      setSecim(null);
+                    },
+                  });
+                }}
+              />
             </div>
           )
         }
@@ -437,6 +475,16 @@ function KullaniciDetayi({ profilId, takimAdi }: { profilId: string; takimAdi?: 
           {p.suspended_at ? ` · ${tarih(p.suspended_at)}` : ''}
         </div>
       )}
+
+      <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 18 }}>
+        <Avatar ad={p.name} url={p.avatar_url} boyut={64} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>{p.name || '(isimsiz)'}</div>
+          <div className="silik" style={{ fontSize: 12, marginTop: 2 }}>
+            {p.avatar_url ? 'Profil fotoğrafı Google hesabından geliyor' : 'Profil fotoğrafı yok'}
+          </div>
+        </div>
+      </div>
 
       <h4 style={{ marginBottom: 10 }}>Bilgiler</h4>
       <dl className="satir-liste">
@@ -507,11 +555,18 @@ function TakimDetayi({ takimId }: { takimId: string }) {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 18 }}>
-        <Arma takim={t} boyut={48} />
-        <div>
-          <div style={{ fontWeight: 700 }}>{t.name}</div>
+      <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 18 }}>
+        <Arma takim={t} boyut={72} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>{t.name}</div>
           <div className="sonuk" style={{ fontSize: 12.5 }}>Katılım kodu: {t.code}</div>
+          <div className="silik" style={{ fontSize: 12, marginTop: 2 }}>
+            {t.logo_url ? (
+              <a href={t.logo_url} target="_blank" rel="noopener">Armayı tam boyutta aç</a>
+            ) : (
+              'Arma yüklenmemiş — renk ve kısaltma gösteriliyor'
+            )}
+          </div>
         </div>
       </div>
 

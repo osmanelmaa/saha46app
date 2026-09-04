@@ -245,6 +245,7 @@ Arayüzdeki denetim yalnızca ekranı gizler; asıl koruma RLS'tedir. Panelin bi
 | `/admin/sikayetler` | Ana iş kuyruğu | `reports` |
 | `/admin/gelmeyenler` | Gelmeme bildirimleri, takıma göre gruplu | `match_ratings.no_show` |
 | `/admin/ilanlar` | Tüm ilanlar, Türkçe duyarlı arama | `listings` |
+| `/admin/maclar` | Maçlar, skorlar, sorunlu kayıtlar | `matches`, `match_ratings` |
 | `/admin/kullanicilar` | Kullanıcı ve takım sekmeleri, yan panelde ayrıntı | `profiles`, `teams`, `team_members` |
 | `/admin/kayitlar` | İşlem kaydı | `audit_log` |
 
@@ -263,7 +264,15 @@ oturumuyla gider ve RLS'teki `is_admin()` dallarından geçer.
 | İlan kaldır (`is_open = false`) | `listings` update | çalışıyor |
 | Askıya al / askıyı kaldır | `profiles` update | çalışıyor |
 | Yönetici yetkisi ver / al | `profiles` update | çalışıyor |
+| Takım sil | `teams` delete | çalışıyor — **cascade**, aşağıya bakın |
 | Uyarı, ilan kısıtı | `audit_log` insert | yalnızca kayda geçer |
+
+**Takım silme yıkıcıdır.** `teams`'e bağlı her şey `on delete cascade`:
+üyelikler, kadro, ilanlar, teklifler, mesajlar, **maç kayıtları** ve
+değerlendirmeler birlikte silinir. Maçlar iki takımı birden ilgilendirdiği
+için **rakip takımların geçmişi de eksilir**; oynanan maç sayıları ve
+ortalama puanları değişir. Onay ekranı silmeden önce bu sayıları
+(`silmeEtkisi()`) tek tek gösterir.
 
 **Şema desteği bekleyen iki iş:**
 

@@ -12,6 +12,7 @@
  *   reports    update  → is_admin()                     ✅
  *   listings   update  → is_admin()                     ✅
  *   profiles   update  → is_admin()                     ✅
+ *   teams      delete  → is_admin()                     ✅
  *   audit_log  insert  → is_admin()                     ✅
  *
  * İzin VERMEDİKLERİ (arayüzde devre dışı, migration gerekiyor):
@@ -207,4 +208,20 @@ export async function kullaniciRolunuDegistir(id: string, rol: 'user' | 'admin')
 
   if (error) throw new Error(error.message);
   return data as Profile;
+}
+
+/**
+ * Takımı siler.
+ *
+ * DİKKAT: teams'e bağlı her şey `on delete cascade` ile tanımlı. Takım
+ * silinince üyelikleri, kadrosu, ilanları, teklifleri, mesajları, MAÇ
+ * KAYITLARI ve değerlendirmeleri de silinir. Maçlar iki takımı birden
+ * ilgilendirdiği için rakip takımın geçmişi de eksilir; oynanan maç
+ * sayısı ve ortalama puanı değişir. Arayüz bu sayıları onay ekranında
+ * göstermeden silme çağrılmamalı.
+ */
+export async function takimiSil(id: string): Promise<void> {
+  const db = istemci();
+  const { error } = await db.from('teams').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }

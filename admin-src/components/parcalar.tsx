@@ -48,6 +48,50 @@ export function Arma({ takim, boyut = 32 }: { takim?: Team; boyut?: number }) {
   );
 }
 
+/**
+ * Kullanıcı avatarı. Google ile giriş yapanlarda profil fotoğrafı gelir;
+ * yoksa adın baş harfi gösterilir.
+ */
+export function Avatar({
+  ad,
+  url,
+  boyut = 32,
+}: {
+  ad?: string | null;
+  url?: string | null;
+  boyut?: number;
+}) {
+  if (url) {
+    return (
+      <img
+        className="arma"
+        src={url}
+        alt=""
+        width={boyut}
+        height={boyut}
+        style={{ width: boyut, height: boyut, objectFit: 'cover', borderRadius: '50%' }}
+      />
+    );
+  }
+  const harf = (ad ?? '').trim().charAt(0).toLocaleUpperCase('tr') || '?';
+  return (
+    <span
+      className="arma"
+      style={{
+        width: boyut,
+        height: boyut,
+        borderRadius: '50%',
+        background: 'var(--surface-alt)',
+        color: 'var(--primary-ink)',
+        fontSize: Math.round(boyut * 0.42),
+      }}
+      aria-hidden="true"
+    >
+      {harf}
+    </span>
+  );
+}
+
 /* --- Sayı kartı ----------------------------------------------------------- */
 
 export function SayiKart({
